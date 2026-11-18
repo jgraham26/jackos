@@ -229,6 +229,7 @@ static int64_t dev_console_write(vfs_file_t *file, const void *buf, size_t count
             putchar('\r');
         }
         putchar(src[i]);
+        write_serial(src[i]);
     }
 
     return (int64_t)count;

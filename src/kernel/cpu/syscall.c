@@ -224,7 +224,7 @@ int64_t sys_open(const char* path, int flags, int mode) {
     }
     if (fd == -1) return -EMFILE;
 
-    uint32_t vfs_flags = (uint32_t)flags & (O_RDONLY | O_WRONLY | O_RDWR | O_CREAT | O_APPEND | O_TRUNC);
+    uint32_t vfs_flags = (uint32_t)flags & (O_RDONLY | O_WRONLY | O_RDWR | O_CREAT | O_APPEND | O_TRUNC | O_NONBLOCK);
 
     vfs_file_t* f = vfs_open(full_path, vfs_flags);
     if (!f) {
@@ -1002,6 +1002,7 @@ int64_t sys_mmap(void *addr, size_t length, int prot, int flags, int fd, int64_t
                 }
                 vmm_unmap_page(proc->pagemap, vaddr);
             }
+            vmm_invlpg(vaddr);
         }
     } else {
         if (proc->mmap_next == 0) {

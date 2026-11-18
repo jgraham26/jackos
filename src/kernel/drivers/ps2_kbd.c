@@ -1,4 +1,5 @@
 #include "drivers/ps2_kbd.h"
+#include "fs/kbdev.h"
 #include "io.h"
 #include "sched/spinlock.h"
 #include "sched/sched.h"
@@ -139,6 +140,7 @@ void kbd_irq_handler(void) {
     }
 
     uint8_t scancode = inb(KBD_DATA_PORT);
+    kbddev_push_scancode(scancode);
 
     if (scancode == 0xE0) {
         s_extended = true;
