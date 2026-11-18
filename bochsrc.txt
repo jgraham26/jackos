@@ -1,0 +1,18 @@
+megs: 32
+
+boot: disk
+magic_break: enabled=1
+
+romimage: file=$BXSHARE/BIOS-bochs-latest
+vgaromimage: file=$BXSHARE/VGABIOS-lgpl-latest.bin
+
+ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
+ata0-master: type=disk, path="disk.img", mode=flat
+
+com1: enabled=1, mode=file, dev="serial.log"
+
+debug_symbols: file=kernel.sym, offset=0
+
+cpu: model=corei7_haswell_4770
+
+vga: extension=vbe, update_freq=60

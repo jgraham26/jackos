@@ -1,0 +1,9 @@
+.clangd
+*.ini
+
+*.img
+build
+*.sym
+*.log
+snapshot.txt
+*.bin

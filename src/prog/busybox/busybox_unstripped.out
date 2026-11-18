@@ -1,0 +1,1012 @@
+Output of:
+x86_64-jackos-gcc -malign-data=abi -Wall -Wshadow -Wwrite-strings -Wundef -Wstrict-prototypes -Wunused -Wunused-parameter -Wunused-function -Wunused-value -Wmissing-prototypes -Wmissing-declarations -Wno-format-security -Wdeclaration-after-statement -Wold-style-definition -finline-limit=0 -fno-builtin-strlen -fomit-frame-pointer -ffunction-sections -fdata-sections -fno-guess-branch-probability -funsigned-char -static-libgcc -falign-functions=1 -falign-jumps=1 -falign-labels=1 -falign-loops=1 -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-builtin-printf -Oz --sysroot=/home/jack/programming/jackos-v10/src/prog/root -static -o busybox_unstripped -Wl,--sort-common -Wl,--sort-section,alignment -Wl,--gc-sections -Wl,--start-group applets/built-in.o archival/lib.a archival/libarchive/lib.a console-tools/lib.a coreutils/lib.a coreutils/libcoreutils/lib.a debianutils/lib.a klibc-utils/lib.a e2fsprogs/lib.a editors/lib.a findutils/lib.a init/lib.a libbb/lib.a libpwdgrp/lib.a loginutils/lib.a mailutils/lib.a miscutils/lib.a modutils/lib.a networking/lib.a networking/libiproute/lib.a networking/udhcp/lib.a printutils/lib.a procps/lib.a runit/lib.a selinux/lib.a shell/lib.a sysklogd/lib.a util-linux/lib.a util-linux/volume_id/lib.a archival/built-in.o archival/libarchive/built-in.o console-tools/built-in.o coreutils/built-in.o coreutils/libcoreutils/built-in.o debianutils/built-in.o klibc-utils/built-in.o e2fsprogs/built-in.o editors/built-in.o findutils/built-in.o init/built-in.o libbb/built-in.o libpwdgrp/built-in.o loginutils/built-in.o mailutils/built-in.o miscutils/built-in.o modutils/built-in.o networking/built-in.o networking/libiproute/built-in.o networking/udhcp/built-in.o printutils/built-in.o procps/built-in.o runit/built-in.o selinux/built-in.o shell/built-in.o sysklogd/built-in.o util-linux/built-in.o util-linux/volume_id/built-in.o -Wl,--end-group -Wl,--warn-common -Wl,-Map,busybox_unstripped.map -Wl,--verbose
+==========
+GNU ld (GNU Binutils) 2.39
+  Supported emulations:
+   elf_x86_64_jackos
+   elf_i386_jackos
+   elf_x86_64
+   elf_i386
+using internal linker script:
+==================================================
+/* Script for -z combreloc */
+/* Copyright (C) 2014-2022 Free Software Foundation, Inc.
+   Copying and distribution of this script, with or without modification,
+   are permitted in any medium without royalty provided the copyright
+   notice and this notice are preserved.  */
+OUTPUT_FORMAT("elf64-x86-64", "elf64-x86-64",
+	      "elf64-x86-64")
+OUTPUT_ARCH(i386:x86-64)
+ENTRY(_start)
+SEARCH_DIR("=/usr/local/x86_64-jackos/lib"); SEARCH_DIR("=/usr/local/lib"); SEARCH_DIR("=/lib"); SEARCH_DIR("=/usr/lib");
+SECTIONS
+{
+  /* Read-only sections, merged into text segment: */
+  PROVIDE (__executable_start = SEGMENT_START("text-segment", 0x400000)); . = SEGMENT_START("text-segment", 0x400000) + SIZEOF_HEADERS;
+  .interp         : { *(.interp) }
+  .note.gnu.build-id  : { *(.note.gnu.build-id) }
+  .hash           : { *(.hash) }
+  .gnu.hash       : { *(.gnu.hash) }
+  .dynsym         : { *(.dynsym) }
+  .dynstr         : { *(.dynstr) }
+  .gnu.version    : { *(.gnu.version) }
+  .gnu.version_d  : { *(.gnu.version_d) }
+  .gnu.version_r  : { *(.gnu.version_r) }
+  .rela.dyn       :
+    {
+      *(.rela.init)
+      *(.rela.text .rela.text.* .rela.gnu.linkonce.t.*)
+      *(.rela.fini)
+      *(.rela.rodata .rela.rodata.* .rela.gnu.linkonce.r.*)
+      *(.rela.data .rela.data.* .rela.gnu.linkonce.d.*)
+      *(.rela.tdata .rela.tdata.* .rela.gnu.linkonce.td.*)
+      *(.rela.tbss .rela.tbss.* .rela.gnu.linkonce.tb.*)
+      *(.rela.ctors)
+      *(.rela.dtors)
+      *(.rela.got)
+      *(.rela.bss .rela.bss.* .rela.gnu.linkonce.b.*)
+      *(.rela.ldata .rela.ldata.* .rela.gnu.linkonce.l.*)
+      *(.rela.lbss .rela.lbss.* .rela.gnu.linkonce.lb.*)
+      *(.rela.lrodata .rela.lrodata.* .rela.gnu.linkonce.lr.*)
+      *(.rela.ifunc)
+    }
+  .rela.plt       :
+    {
+      *(.rela.plt)
+      PROVIDE_HIDDEN (__rela_iplt_start = .);
+      *(.rela.iplt)
+      PROVIDE_HIDDEN (__rela_iplt_end = .);
+    }
+  .relr.dyn : { *(.relr.dyn) }
+  .init           :
+  {
+    KEEP (*(SORT_NONE(.init)))
+  }
+  .plt            : { *(.plt) *(.iplt) }
+.plt.got        : { *(.plt.got) }
+.plt.sec        : { *(.plt.sec) }
+  .text           :
+  {
+    *(.text.unlikely .text.*_unlikely .text.unlikely.*)
+    *(.text.exit .text.exit.*)
+    *(.text.startup .text.startup.*)
+    *(.text.hot .text.hot.*)
+    *(SORT(.text.sorted.*))
+    *(.text .stub .text.* .gnu.linkonce.t.*)
+    /* .gnu.warning sections are handled specially by elf.em.  */
+    *(.gnu.warning)
+  }
+  .fini           :
+  {
+    KEEP (*(SORT_NONE(.fini)))
+  }
+  PROVIDE (__etext = .);
+  PROVIDE (_etext = .);
+  PROVIDE (etext = .);
+  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
+  .rodata1        : { *(.rodata1) }
+  .eh_frame_hdr   : { *(.eh_frame_hdr) *(.eh_frame_entry .eh_frame_entry.*) }
+  .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) *(.eh_frame.*) }
+  .gcc_except_table   : ONLY_IF_RO { *(.gcc_except_table .gcc_except_table.*) }
+  .gnu_extab   : ONLY_IF_RO { *(.gnu_extab*) }
+  /* These sections are generated by the Sun/Oracle C++ compiler.  */
+  .exception_ranges   : ONLY_IF_RO { *(.exception_ranges*) }
+  /* Adjust the address for the data segment.  We want to adjust up to
+     the same address within the page on the next page up.  */
+  . = DATA_SEGMENT_ALIGN (0x1000, 0x1000);
+  /* Exception handling  */
+  .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) *(.eh_frame.*) }
+  .gnu_extab      : ONLY_IF_RW { *(.gnu_extab) }
+  .gcc_except_table   : ONLY_IF_RW { *(.gcc_except_table .gcc_except_table.*) }
+  .exception_ranges   : ONLY_IF_RW { *(.exception_ranges*) }
+  /* Thread Local Storage sections  */
+  .tdata	  :
+   {
+     PROVIDE_HIDDEN (__tdata_start = .);
+     *(.tdata .tdata.* .gnu.linkonce.td.*)
+   }
+  .tbss		  : { *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) }
+  .preinit_array    :
+  {
+    PROVIDE_HIDDEN (__preinit_array_start = .);
+    KEEP (*(.preinit_array))
+    PROVIDE_HIDDEN (__preinit_array_end = .);
+  }
+  .init_array    :
+  {
+    PROVIDE_HIDDEN (__init_array_start = .);
+    KEEP (*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
+    KEEP (*(.init_array EXCLUDE_FILE (*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o ) .ctors))
+    PROVIDE_HIDDEN (__init_array_end = .);
+  }
+  .fini_array    :
+  {
+    PROVIDE_HIDDEN (__fini_array_start = .);
+    KEEP (*(SORT_BY_INIT_PRIORITY(.fini_array.*) SORT_BY_INIT_PRIORITY(.dtors.*)))
+    KEEP (*(.fini_array EXCLUDE_FILE (*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o ) .dtors))
+    PROVIDE_HIDDEN (__fini_array_end = .);
+  }
+  .ctors          :
+  {
+    /* gcc uses crtbegin.o to find the start of
+       the constructors, so we make sure it is
+       first.  Because this is a wildcard, it
+       doesn't matter if the user does not
+       actually link against crtbegin.o; the
+       linker won't look for a file to match a
+       wildcard.  The wildcard also means that it
+       doesn't matter which directory crtbegin.o
+       is in.  */
+    KEEP (*crtbegin.o(.ctors))
+    KEEP (*crtbegin?.o(.ctors))
+    /* We don't want to include the .ctor section from
+       the crtend.o file until after the sorted ctors.
+       The .ctor section from the crtend file contains the
+       end of ctors marker and it must be last */
+    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o ) .ctors))
+    KEEP (*(SORT(.ctors.*)))
+    KEEP (*(.ctors))
+  }
+  .dtors          :
+  {
+    KEEP (*crtbegin.o(.dtors))
+    KEEP (*crtbegin?.o(.dtors))
+    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o ) .dtors))
+    KEEP (*(SORT(.dtors.*)))
+    KEEP (*(.dtors))
+  }
+  .jcr            : { KEEP (*(.jcr)) }
+  .data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*) }
+  .dynamic        : { *(.dynamic) }
+  .got            : { *(.got) *(.igot) }
+  . = DATA_SEGMENT_RELRO_END (SIZEOF (.got.plt) >= 24 ? 24 : 0, .);
+  .got.plt        : { *(.got.plt) *(.igot.plt) }
+  .data           :
+  {
+    *(.data .data.* .gnu.linkonce.d.*)
+    SORT(CONSTRUCTORS)
+  }
+  .data1          : { *(.data1) }
+  _edata = .; PROVIDE (edata = .);
+  . = .;
+  __bss_start = .;
+  .bss            :
+  {
+   *(.dynbss)
+   *(.bss .bss.* .gnu.linkonce.b.*)
+   *(COMMON)
+   /* Align here to ensure that the .bss section occupies space up to
+      _end.  Align after .bss to ensure correct alignment even if the
+      .bss section disappears because there are no input sections.
+      FIXME: Why do we need it? When there is no .bss section, we do not
+      pad the .data section.  */
+   . = ALIGN(. != 0 ? 64 / 8 : 1);
+  }
+  .lbss   :
+  {
+    *(.dynlbss)
+    *(.lbss .lbss.* .gnu.linkonce.lb.*)
+    *(LARGE_COMMON)
+  }
+  . = ALIGN(64 / 8);
+  . = SEGMENT_START("ldata-segment", .);
+  .lrodata   ALIGN(0x1000) + (. & (0x1000 - 1)) :
+  {
+    *(.lrodata .lrodata.* .gnu.linkonce.lr.*)
+  }
+  .ldata   ALIGN(0x1000) + (. & (0x1000 - 1)) :
+  {
+    *(.ldata .ldata.* .gnu.linkonce.l.*)
+    . = ALIGN(. != 0 ? 64 / 8 : 1);
+  }
+  . = ALIGN(64 / 8);
+  _end = .; PROVIDE (end = .);
+  . = DATA_SEGMENT_END (.);
+  /* Stabs debugging sections.  */
+  .stab          0 : { *(.stab) }
+  .stabstr       0 : { *(.stabstr) }
+  .stab.excl     0 : { *(.stab.excl) }
+  .stab.exclstr  0 : { *(.stab.exclstr) }
+  .stab.index    0 : { *(.stab.index) }
+  .stab.indexstr 0 : { *(.stab.indexstr) }
+  .comment       0 : { *(.comment) }
+  .gnu.build.attributes : { *(.gnu.build.attributes .gnu.build.attributes.*) }
+  /* DWARF debug sections.
+     Symbols in the DWARF debugging sections are relative to the beginning
+     of the section so we begin them at 0.  */
+  /* DWARF 1.  */
+  .debug          0 : { *(.debug) }
+  .line           0 : { *(.line) }
+  /* GNU DWARF 1 extensions.  */
+  .debug_srcinfo  0 : { *(.debug_srcinfo) }
+  .debug_sfnames  0 : { *(.debug_sfnames) }
+  /* DWARF 1.1 and DWARF 2.  */
+  .debug_aranges  0 : { *(.debug_aranges) }
+  .debug_pubnames 0 : { *(.debug_pubnames) }
+  /* DWARF 2.  */
+  .debug_info     0 : { *(.debug_info .gnu.linkonce.wi.*) }
+  .debug_abbrev   0 : { *(.debug_abbrev) }
+  .debug_line     0 : { *(.debug_line .debug_line.* .debug_line_end) }
+  .debug_frame    0 : { *(.debug_frame) }
+  .debug_str      0 : { *(.debug_str) }
+  .debug_loc      0 : { *(.debug_loc) }
+  .debug_macinfo  0 : { *(.debug_macinfo) }
+  /* SGI/MIPS DWARF 2 extensions.  */
+  .debug_weaknames 0 : { *(.debug_weaknames) }
+  .debug_funcnames 0 : { *(.debug_funcnames) }
+  .debug_typenames 0 : { *(.debug_typenames) }
+  .debug_varnames  0 : { *(.debug_varnames) }
+  /* DWARF 3.  */
+  .debug_pubtypes 0 : { *(.debug_pubtypes) }
+  .debug_ranges   0 : { *(.debug_ranges) }
+  /* DWARF 5.  */
+  .debug_addr     0 : { *(.debug_addr) }
+  .debug_line_str 0 : { *(.debug_line_str) }
+  .debug_loclists 0 : { *(.debug_loclists) }
+  .debug_macro    0 : { *(.debug_macro) }
+  .debug_names    0 : { *(.debug_names) }
+  .debug_rnglists 0 : { *(.debug_rnglists) }
+  .debug_str_offsets 0 : { *(.debug_str_offsets) }
+  .debug_sup      0 : { *(.debug_sup) }
+  .gnu.attributes 0 : { KEEP (*(.gnu.attributes)) }
+  /DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) }
+}
+
+
+==================================================
+/usr/local/lib/gcc/x86_64-jackos/12.2.0/../../../../x86_64-jackos/bin/ld: mode elf_x86_64_jackos
+attempt to open /home/jack/programming/jackos-v10/src/prog/root/usr/lib/crt1.o succeeded
+/home/jack/programming/jackos-v10/src/prog/root/usr/lib/crt1.o
+attempt to open /usr/local/lib/gcc/x86_64-jackos/12.2.0/crti.o succeeded
+/usr/local/lib/gcc/x86_64-jackos/12.2.0/crti.o
+attempt to open /usr/local/lib/gcc/x86_64-jackos/12.2.0/crtbeginT.o succeeded
+/usr/local/lib/gcc/x86_64-jackos/12.2.0/crtbeginT.o
+attempt to open applets/built-in.o succeeded
+applets/built-in.o
+attempt to open archival/lib.a succeeded
+archival/lib.a
+attempt to open archival/libarchive/lib.a succeeded
+archival/libarchive/lib.a
+attempt to open console-tools/lib.a succeeded
+console-tools/lib.a
+attempt to open coreutils/lib.a succeeded
+coreutils/lib.a
+attempt to open coreutils/libcoreutils/lib.a succeeded
+coreutils/libcoreutils/lib.a
+attempt to open debianutils/lib.a succeeded
+debianutils/lib.a
+attempt to open klibc-utils/lib.a succeeded
+klibc-utils/lib.a
+attempt to open e2fsprogs/lib.a succeeded
+e2fsprogs/lib.a
+attempt to open editors/lib.a succeeded
+editors/lib.a
+attempt to open findutils/lib.a succeeded
+findutils/lib.a
+attempt to open init/lib.a succeeded
+init/lib.a
+attempt to open libbb/lib.a succeeded
+libbb/lib.a
+(libbb/lib.a)appletlib.o
+(libbb/lib.a)compare_string_array.o
+(libbb/lib.a)concat_path_file.o
+(libbb/lib.a)default_error_retval.o
+(libbb/lib.a)get_last_path_component.o
+(libbb/lib.a)last_char_is.o
+(libbb/lib.a)messages.o
+(libbb/lib.a)perror_msg.o
+(libbb/lib.a)ptr_to_globals.o
+(libbb/lib.a)verror_msg.o
+(libbb/lib.a)xfunc_die.o
+(libbb/lib.a)xfuncs.o
+(libbb/lib.a)xfuncs_printf.o
+(libbb/lib.a)xreadlink.o
+(libbb/lib.a)copyfd.o
+(libbb/lib.a)full_write.o
+(libbb/lib.a)read.o
+(libbb/lib.a)safe_write.o
+(libbb/lib.a)signals.o
+(libbb/lib.a)time.o
+(libbb/lib.a)xgetcwd.o
+(libbb/lib.a)bb_strtonum.o
+attempt to open libpwdgrp/lib.a succeeded
+libpwdgrp/lib.a
+attempt to open loginutils/lib.a succeeded
+loginutils/lib.a
+attempt to open mailutils/lib.a succeeded
+mailutils/lib.a
+attempt to open miscutils/lib.a succeeded
+miscutils/lib.a
+(miscutils/lib.a)less.o
+attempt to open modutils/lib.a succeeded
+modutils/lib.a
+attempt to open networking/lib.a succeeded
+networking/lib.a
+attempt to open networking/libiproute/lib.a succeeded
+networking/libiproute/lib.a
+attempt to open networking/udhcp/lib.a succeeded
+networking/udhcp/lib.a
+attempt to open printutils/lib.a succeeded
+printutils/lib.a
+attempt to open procps/lib.a succeeded
+procps/lib.a
+(procps/lib.a)free.o
+(procps/lib.a)ps.o
+(procps/lib.a)top.o
+attempt to open runit/lib.a succeeded
+runit/lib.a
+attempt to open selinux/lib.a succeeded
+selinux/lib.a
+attempt to open shell/lib.a succeeded
+shell/lib.a
+(shell/lib.a)ash.o
+(shell/lib.a)ash_ptr_hack.o
+(shell/lib.a)shell_common.o
+attempt to open sysklogd/lib.a succeeded
+sysklogd/lib.a
+attempt to open util-linux/lib.a succeeded
+util-linux/lib.a
+(util-linux/lib.a)fbset.o
+(util-linux/lib.a)hexdump.o
+(util-linux/lib.a)hexdump_xxd.o
+attempt to open util-linux/volume_id/lib.a succeeded
+util-linux/volume_id/lib.a
+attempt to open archival/built-in.o succeeded
+archival/built-in.o
+attempt to open archival/libarchive/built-in.o succeeded
+archival/libarchive/built-in.o
+attempt to open console-tools/built-in.o succeeded
+console-tools/built-in.o
+attempt to open coreutils/built-in.o succeeded
+coreutils/built-in.o
+attempt to open coreutils/libcoreutils/built-in.o succeeded
+coreutils/libcoreutils/built-in.o
+attempt to open debianutils/built-in.o succeeded
+debianutils/built-in.o
+attempt to open klibc-utils/built-in.o succeeded
+klibc-utils/built-in.o
+attempt to open e2fsprogs/built-in.o succeeded
+e2fsprogs/built-in.o
+attempt to open editors/built-in.o succeeded
+editors/built-in.o
+attempt to open findutils/built-in.o succeeded
+findutils/built-in.o
+attempt to open init/built-in.o succeeded
+init/built-in.o
+attempt to open libbb/built-in.o succeeded
+libbb/built-in.o
+attempt to open libpwdgrp/built-in.o succeeded
+libpwdgrp/built-in.o
+attempt to open loginutils/built-in.o succeeded
+loginutils/built-in.o
+attempt to open mailutils/built-in.o succeeded
+mailutils/built-in.o
+attempt to open miscutils/built-in.o succeeded
+miscutils/built-in.o
+attempt to open modutils/built-in.o succeeded
+modutils/built-in.o
+attempt to open networking/built-in.o succeeded
+networking/built-in.o
+attempt to open networking/libiproute/built-in.o succeeded
+networking/libiproute/built-in.o
+attempt to open networking/udhcp/built-in.o succeeded
+networking/udhcp/built-in.o
+attempt to open printutils/built-in.o succeeded
+printutils/built-in.o
+attempt to open procps/built-in.o succeeded
+procps/built-in.o
+attempt to open runit/built-in.o succeeded
+runit/built-in.o
+attempt to open selinux/built-in.o succeeded
+selinux/built-in.o
+attempt to open shell/built-in.o succeeded
+shell/built-in.o
+attempt to open sysklogd/built-in.o succeeded
+sysklogd/built-in.o
+attempt to open util-linux/built-in.o succeeded
+util-linux/built-in.o
+attempt to open util-linux/volume_id/built-in.o succeeded
+util-linux/volume_id/built-in.o
+archival/lib.a
+(archival/lib.a)bbunzip.o
+(archival/lib.a)gzip.o
+(archival/lib.a)tar.o
+(archival/lib.a)chksum_and_xwrite_tar_header.o
+archival/libarchive/lib.a
+(archival/libarchive/lib.a)data_extract_all.o
+(archival/libarchive/lib.a)data_extract_to_command.o
+(archival/libarchive/lib.a)data_extract_to_stdout.o
+(archival/libarchive/lib.a)data_skip.o
+(archival/libarchive/lib.a)decompress_gunzip.o
+(archival/libarchive/lib.a)filter_accept_reject_list.o
+(archival/libarchive/lib.a)find_list_entry.o
+(archival/libarchive/lib.a)get_header_tar.o
+(archival/libarchive/lib.a)header_list.o
+(archival/libarchive/lib.a)header_verbose_list.o
+(archival/libarchive/lib.a)init_handle.o
+(archival/libarchive/lib.a)open_transformer.o
+(archival/libarchive/lib.a)seek_by_jump.o
+(archival/libarchive/lib.a)seek_by_read.o
+(archival/libarchive/lib.a)unsafe_prefix.o
+(archival/libarchive/lib.a)unsafe_symlink_target.o
+(archival/libarchive/lib.a)data_align.o
+(archival/libarchive/lib.a)filter_accept_all.o
+(archival/libarchive/lib.a)header_skip.o
+console-tools/lib.a
+(console-tools/lib.a)clear.o
+coreutils/lib.a
+(coreutils/lib.a)cat.o
+(coreutils/lib.a)cp.o
+(coreutils/lib.a)cut.o
+(coreutils/lib.a)date.o
+(coreutils/lib.a)dd.o
+(coreutils/lib.a)echo.o
+(coreutils/lib.a)env.o
+(coreutils/lib.a)false.o
+(coreutils/lib.a)head.o
+(coreutils/lib.a)id.o
+(coreutils/lib.a)ln.o
+(coreutils/lib.a)ls.o
+(coreutils/lib.a)mkdir.o
+(coreutils/lib.a)mv.o
+(coreutils/lib.a)printenv.o
+(coreutils/lib.a)printf.o
+(coreutils/lib.a)pwd.o
+(coreutils/lib.a)rm.o
+(coreutils/lib.a)rmdir.o
+(coreutils/lib.a)sleep.o
+(coreutils/lib.a)sort.o
+(coreutils/lib.a)tail.o
+(coreutils/lib.a)tee.o
+(coreutils/lib.a)test.o
+(coreutils/lib.a)test_ptr_hack.o
+(coreutils/lib.a)tr.o
+(coreutils/lib.a)true.o
+(coreutils/lib.a)uname.o
+(coreutils/lib.a)uniq.o
+(coreutils/lib.a)usleep.o
+(coreutils/lib.a)wc.o
+(coreutils/lib.a)whoami.o
+(coreutils/lib.a)yes.o
+coreutils/libcoreutils/lib.a
+(coreutils/libcoreutils/lib.a)cp_mv_stat.o
+debianutils/lib.a
+klibc-utils/lib.a
+e2fsprogs/lib.a
+editors/lib.a
+(editors/lib.a)awk.o
+(editors/lib.a)sed.o
+(editors/lib.a)vi.o
+findutils/lib.a
+(findutils/lib.a)grep.o
+(findutils/lib.a)xargs.o
+init/lib.a
+(init/lib.a)halt.o
+libbb/lib.a
+(libbb/lib.a)ask_confirmation.o
+(libbb/lib.a)bb_cat.o
+(libbb/lib.a)bb_getgroups.o
+(libbb/lib.a)bb_pwd.o
+(libbb/lib.a)common_bufsiz.o
+(libbb/lib.a)copy_file.o
+(libbb/lib.a)crc32.o
+(libbb/lib.a)dump.o
+(libbb/lib.a)duration.o
+(libbb/lib.a)endofname.o
+(libbb/lib.a)executable.o
+(libbb/lib.a)fclose_nonstdin.o
+(libbb/lib.a)fflush_stdout_and_exit.o
+(libbb/lib.a)get_line_from_file.o
+(libbb/lib.a)get_shell_name.o
+(libbb/lib.a)getopt32.o
+(libbb/lib.a)getopt_allopts.o
+(libbb/lib.a)human_readable.o
+(libbb/lib.a)inode_hash.o
+(libbb/lib.a)isdirectory.o
+(libbb/lib.a)lineedit.o
+(libbb/lib.a)lineedit_ptr_hack.o
+(libbb/lib.a)llist.o
+(libbb/lib.a)make_directory.o
+(libbb/lib.a)mode_string.o
+(libbb/lib.a)parse_mode.o
+(libbb/lib.a)perror_nomsg_and_die.o
+(libbb/lib.a)print_numbered_lines.o
+(libbb/lib.a)printable.o
+(libbb/lib.a)printable_string.o
+(libbb/lib.a)process_escape_sequence.o
+(libbb/lib.a)procps.o
+(libbb/lib.a)read_key.o
+(libbb/lib.a)read_printf.o
+(libbb/lib.a)recursive_action.o
+(libbb/lib.a)remove_file.o
+(libbb/lib.a)safe_poll.o
+(libbb/lib.a)safe_strncpy.o
+(libbb/lib.a)skip_whitespace.o
+(libbb/lib.a)sysconf.o
+(libbb/lib.a)u_signal_names.o
+(libbb/lib.a)vfork_daemon_rexec.o
+(libbb/lib.a)wfopen.o
+(libbb/lib.a)wfopen_input.o
+(libbb/lib.a)xatonum.o
+(libbb/lib.a)xrealloc_vector.o
+(libbb/lib.a)xregcomp.o
+(libbb/lib.a)auto_string.o
+(libbb/lib.a)bb_qsort.o
+(libbb/lib.a)concat_subpath_file.o
+libpwdgrp/lib.a
+loginutils/lib.a
+mailutils/lib.a
+miscutils/lib.a
+modutils/lib.a
+networking/lib.a
+networking/libiproute/lib.a
+networking/udhcp/lib.a
+printutils/lib.a
+procps/lib.a
+(procps/lib.a)kill.o
+runit/lib.a
+selinux/lib.a
+shell/lib.a
+sysklogd/lib.a
+util-linux/lib.a
+util-linux/volume_id/lib.a
+archival/built-in.o
+archival/libarchive/built-in.o
+console-tools/built-in.o
+coreutils/built-in.o
+coreutils/libcoreutils/built-in.o
+debianutils/built-in.o
+klibc-utils/built-in.o
+e2fsprogs/built-in.o
+editors/built-in.o
+findutils/built-in.o
+init/built-in.o
+libbb/built-in.o
+libpwdgrp/built-in.o
+loginutils/built-in.o
+mailutils/built-in.o
+miscutils/built-in.o
+modutils/built-in.o
+networking/built-in.o
+networking/libiproute/built-in.o
+networking/udhcp/built-in.o
+printutils/built-in.o
+procps/built-in.o
+runit/built-in.o
+selinux/built-in.o
+shell/built-in.o
+sysklogd/built-in.o
+util-linux/built-in.o
+util-linux/volume_id/built-in.o
+archival/lib.a
+archival/libarchive/lib.a
+console-tools/lib.a
+coreutils/lib.a
+coreutils/libcoreutils/lib.a
+debianutils/lib.a
+klibc-utils/lib.a
+e2fsprogs/lib.a
+editors/lib.a
+findutils/lib.a
+init/lib.a
+libbb/lib.a
+libpwdgrp/lib.a
+loginutils/lib.a
+mailutils/lib.a
+miscutils/lib.a
+modutils/lib.a
+networking/lib.a
+networking/libiproute/lib.a
+networking/udhcp/lib.a
+printutils/lib.a
+procps/lib.a
+runit/lib.a
+selinux/lib.a
+shell/lib.a
+sysklogd/lib.a
+util-linux/lib.a
+util-linux/volume_id/lib.a
+archival/built-in.o
+archival/libarchive/built-in.o
+console-tools/built-in.o
+coreutils/built-in.o
+coreutils/libcoreutils/built-in.o
+debianutils/built-in.o
+klibc-utils/built-in.o
+e2fsprogs/built-in.o
+editors/built-in.o
+findutils/built-in.o
+init/built-in.o
+libbb/built-in.o
+libpwdgrp/built-in.o
+loginutils/built-in.o
+mailutils/built-in.o
+miscutils/built-in.o
+modutils/built-in.o
+networking/built-in.o
+networking/libiproute/built-in.o
+networking/udhcp/built-in.o
+printutils/built-in.o
+procps/built-in.o
+runit/built-in.o
+selinux/built-in.o
+shell/built-in.o
+sysklogd/built-in.o
+util-linux/built-in.o
+util-linux/volume_id/built-in.o
+attempt to open /usr/local/lib/gcc/x86_64-jackos/12.2.0/libgcc.so failed
+attempt to open /usr/local/lib/gcc/x86_64-jackos/12.2.0/libgcc.a succeeded
+/usr/local/lib/gcc/x86_64-jackos/12.2.0/libgcc.a
+attempt to open /usr/local/lib/gcc/x86_64-jackos/12.2.0/libc.so failed
+attempt to open /usr/local/lib/gcc/x86_64-jackos/12.2.0/libc.a failed
+attempt to open /usr/local/lib/gcc/x86_64-jackos/12.2.0/../../../../x86_64-jackos/lib/libc.so failed
+attempt to open /usr/local/lib/gcc/x86_64-jackos/12.2.0/../../../../x86_64-jackos/lib/libc.a failed
+attempt to open /home/jack/programming/jackos-v10/src/prog/root/lib/libc.so failed
+attempt to open /home/jack/programming/jackos-v10/src/prog/root/lib/libc.a failed
+attempt to open /home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.so failed
+attempt to open /home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a succeeded
+/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sysconf.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)closedir.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)opendir.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)readdir.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__environ.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__libc_start_main.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)clearenv.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getenv.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)putenv.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)setenv.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)unsetenv.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__errno_location.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strerror.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)exit.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fcntl.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)open.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)defsysinfo.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)libc.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)syscall_ret.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)chroot.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)reboot.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)settimeofday.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sysinfo.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)utimes.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__lctrans.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)calloc.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)free.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)lite_malloc.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)free.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)malloc.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)realloc.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)replaced.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)dirname.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getauxval.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getopt.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getopt_long.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getrlimit.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)ioctl.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)realpath.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)setrlimit.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)uname.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)mmap.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)mprotect.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)munmap.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)mblen.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)mbtowc.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)bind.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)listen.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sendto.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)socket.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getgrent.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getgrent_a.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getgrouplist.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getpwent.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getpwent_a.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)nscd_query.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)rand.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)execl.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)execlp.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)execv.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)execve.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)execvp.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fork.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)system.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)wait.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)waitpid.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)vfork.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fnmatch.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)glob.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)regcomp.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)regerror.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)regexec.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)tre-mem.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sched_yield.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)poll.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)longjmp.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)setjmp.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)block.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)kill.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)killpg.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)raise.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sigaction.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sigaddset.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sigemptyset.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sigfillset.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)siglongjmp.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)signal.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sigprocmask.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sigsuspend.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)restore.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sigsetjmp.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)chmod.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fchmod.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fstat.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fstatat.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)futimesat.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)lstat.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)mkdir.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)mknod.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)stat.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)umask.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)utimensat.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__fdopen.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__lockfile.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__stdio_close.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__stdio_read.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__stdio_seek.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__stdio_write.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)clearerr.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)dprintf.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fclose.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)ferror.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fflush.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fgets.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fileno.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fopen.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fprintf.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fputs.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fread.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)freopen.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fseek.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fwrite.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getc_unlocked.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getchar_unlocked.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getline.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)ofl.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)ofl_add.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)pclose.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)popen.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)printf.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)putc.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)putc_unlocked.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)putchar_unlocked.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)puts.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)rename.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)setbuf.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)setvbuf.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)snprintf.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sprintf.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sscanf.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)stderr.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)stdin.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)stdout.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)ungetc.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)vasprintf.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)vdprintf.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)vfprintf.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)vprintf.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)vsnprintf.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)vsprintf.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)vsscanf.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)atof.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)atoi.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)bsearch.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)div.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)qsort_nr.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strtod.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strtol.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)memchr.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)memcmp.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)memrchr.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)stpcpy.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)stpncpy.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strcasecmp.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strcasestr.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strcat.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strchr.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strchrnul.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strcmp.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strcpy.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strcspn.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strdup.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strlen.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strncasecmp.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strncmp.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strncpy.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strndup.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strnlen.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strpbrk.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strrchr.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strsep.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strsignal.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strspn.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strstr.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strtok_r.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strverscmp.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)memcpy.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)memmove.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)memset.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)mkstemp.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)tcgetattr.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)tcsetattr.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__lock.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__syscall_cp.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)lock_ptc.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)pthread_rwlock_rdlock.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)pthread_rwlock_timedrdlock.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)pthread_rwlock_tryrdlock.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)pthread_rwlock_unlock.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)pthread_rwlock_wrlock.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)pthread_setcancelstate.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)pthread_sigmask.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)pthread_testcancel.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)synccall.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)clock_settime.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)ctime.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)gettimeofday.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)localtime.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)localtime_r.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)mktime.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strftime.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)strptime.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)time.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)times.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)_exit.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)access.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)chdir.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)chown.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)close.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)dup.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)dup2.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)dup3.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fchdir.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fchown.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fsync.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)ftruncate.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getcwd.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getegid.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)geteuid.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getgid.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getgroups.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getpgrp.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getpid.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getppid.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getuid.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)isatty.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)lchown.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)link.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)lseek.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)pipe.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)pipe2.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)read.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)readlink.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)rmdir.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)setegid.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)seteuid.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)setgid.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)setpgid.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)setsid.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)setuid.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)setxid.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sleep.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)symlink.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sync.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)tcgetpgrp.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)tcsetpgrp.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)ttyname_r.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)unlink.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)usleep.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)write.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)iswalnum.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)iswalpha.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)iswctype.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)iswgraph.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)iswlower.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)iswprint.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)iswpunct.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)iswspace.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)iswupper.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)iswxdigit.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)tolower.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)towctrans.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__init_tls.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)_Exit.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)abort_lock.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)floatscan.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)intscan.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)procfdname.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)shgetc.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)langinfo.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)realloc.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__fpclassifyl.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__signbitl.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)copysignl.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)frexpl.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)scalbn.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)scalbnl.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fabsl.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)fmodl.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)mremap.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)internal.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)wctomb.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)connect.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sendmsg.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getgr_a.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getpw_a.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getpw_r.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)_Fork.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)posix_spawn.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)posix_spawn_file_actions_addclose.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)posix_spawn_file_actions_adddup2.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)posix_spawn_file_actions_destroy.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)posix_spawn_file_actions_init.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)posix_spawnattr_destroy.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)posix_spawnattr_init.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)posix_spawnattr_setflags.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)posix_spawnattr_setsigdefault.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)posix_spawnattr_setsigmask.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sigismember.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sigsetjmp_tail.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__fmodeflags.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__overflow.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__stdout_write.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__toread.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__towrite.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__uflow.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)getdelim.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)vfscanf.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)qsort.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)wcschr.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)wcslen.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)mkostemps.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__timedwait.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)default_attr.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)pthread_rwlock_timedwrlock.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)pthread_rwlock_trywrlock.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sem_destroy.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sem_init.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sem_post.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sem_wait.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__set_thread_area.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)clone.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__secs_to_tm.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__tm_to_secs.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__tz.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__utc.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__year_to_secs.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)asctime.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)asctime_r.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)clock_gettime.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)nanosleep.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)iswblank.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)iswcntrl.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)vdso.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)c_locale.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)mbrtowc.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)mbsinit.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)wcrtomb.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__stdio_exit.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__randname.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sem_timedwait.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)sem_trywait.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__map_file.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)__month_to_secs.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)clock_nanosleep.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)isblank.o
+(/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a)pthread_cleanup_push.o
+/usr/local/lib/gcc/x86_64-jackos/12.2.0/libgcc.a
+/home/jack/programming/jackos-v10/src/prog/root/usr/lib/libc.a
+attempt to open /usr/local/lib/gcc/x86_64-jackos/12.2.0/crtend.o succeeded
+/usr/local/lib/gcc/x86_64-jackos/12.2.0/crtend.o
+attempt to open /usr/local/lib/gcc/x86_64-jackos/12.2.0/crtn.o succeeded
+/usr/local/lib/gcc/x86_64-jackos/12.2.0/crtn.o
+/usr/local/lib/gcc/x86_64-jackos/12.2.0/../../../../x86_64-jackos/bin/ld: warning: busybox_unstripped has a LOAD segment with RWX permissions
