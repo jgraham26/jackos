@@ -24,6 +24,7 @@
 #define SYS_IOCTL 16
 #define SYS_READV  19
 #define SYS_WRITEV 20
+#define SYS_ACCESS 21
 #define SYS_PIPE 22
 #define SYS_SCHED_YIELD  24
 #define SYS_DUP   32
@@ -73,6 +74,7 @@
 #define SYS_RENAMEAT   264
 #define SYS_SYMLINKAT  266
 #define SYS_READLINKAT  267
+#define SYS_FACCESSAT 269
 #define SYS_PPOLL  271
 #define SYS_DUP3  292
 #define SYS_PIPE2 293
@@ -100,6 +102,15 @@
 #define F_GETFL            3
 #define F_SETFL            4
 #define F_DUPFD_CLOEXEC    1030
+
+#define F_OK 0
+#define X_OK 1
+#define W_OK 2
+#define R_OK 4
+
+#define AT_FDCWD            -100
+#define AT_SYMLINK_NOFOLLOW 0x100
+#define AT_EACCESS          0x200
 
 #define FD_CLOEXEC         1
 

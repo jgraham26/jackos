@@ -1944,6 +1944,36 @@ int64_t sys_mprotect(void *addr, size_t len, int prot) {
     return 0;
 }
 
+int64_t sys_faccessat(int dirfd, const char *pathname, int mode, int flags) {
+    (void)flags;
+
+    if (!g_current_thread || !g_current_thread->process) {
+        return -ESRCH;
+    }
+
+    if (mode != F_OK && (mode & ~(R_OK | W_OK | X_OK)) != 0) {
+        return -EINVAL;
+    }
+
+    char kpath[VFS_MAX_PATH];
+    int err = resolve_at_path(dirfd, pathname, kpath, sizeof(kpath));
+    if (err != 0) {
+        return err;
+    }
+
+    vfs_node_t *node = vfs_resolve_path(kpath);
+    if (!node) {
+        return -ENOENT;
+    }
+
+
+    return 0;
+}
+
+int64_t sys_access(const char *pathname, int mode) {
+    return sys_faccessat(AT_FDCWD, pathname, mode, 0);
+}
+
 
 // define syscall wrappers
 
@@ -1987,6 +2017,8 @@ DEFINE_SYSCALL4(sys_renameat,      int, const char *, int, const char *)
 DEFINE_SYSCALL3(sys_symlinkat,     const char *, int, const char *)
 DEFINE_SYSCALL4(sys_readlinkat,    int, const char *, char *, size_t)
 DEFINE_SYSCALL3(sys_syslog, int, char *, int)
+DEFINE_SYSCALL2(sys_access,        const char *, int)
+DEFINE_SYSCALL4(sys_faccessat,     int, const char *, int, int)
 
 /* Memory Management */
 DEFINE_SYSCALL6(sys_mmap,          void *, size_t, int, int, int, int64_t)
@@ -2041,6 +2073,7 @@ static const syscall_fn_t s_syscall_table[SYSCALL_MAX] = {
     [SYS_IOCTL]           = wrap_sys_ioctl,
     [SYS_READV]           = wrap_sys_readv,
     [SYS_WRITEV]          = wrap_sys_writev,
+    [SYS_ACCESS]          = wrap_sys_access,
     [SYS_PIPE]            = wrap_sys_pipe,
     [SYS_DUP]             = wrap_sys_dup,
     [SYS_DUP2]            = wrap_sys_dup2,
@@ -2087,6 +2120,7 @@ static const syscall_fn_t s_syscall_table[SYSCALL_MAX] = {
     [SYS_RENAMEAT]        = wrap_sys_renameat,
     [SYS_SYMLINKAT]       = wrap_sys_symlinkat,
     [SYS_READLINKAT]      = wrap_sys_readlinkat,
+    [SYS_FACCESSAT]       = wrap_sys_faccessat,
     [SYS_DUP3]            = wrap_sys_dup3,
     [SYS_PIPE2]           = wrap_sys_pipe2,
 };
