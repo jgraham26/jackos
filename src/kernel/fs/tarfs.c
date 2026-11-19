@@ -1,7 +1,7 @@
 #include "fs/vfs.h"
 #include "mem/kheap.h"
 #include <string.h>
-#include <stdio.h>
+#include "drivers/klog.h"
 #include <stdbool.h>
 
 struct tar_header {
@@ -289,7 +289,7 @@ static vfs_node_t *tarfs_lookup(vfs_node_t *parent, const char *name) {
         target_path[len + nlen] = '\0';
     }
 
-    serial_printf("[TARFS] Lookup parent='%s', looking for '%s' -> target='%s'\n",
+    klog_printf("[TARFS] Lookup parent='%s', looking for '%s' -> target='%s'\n",
               parent->name, name, target_path);
 
     /* Scan entries for target_path */

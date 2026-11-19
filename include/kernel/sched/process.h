@@ -54,6 +54,7 @@ typedef struct process {
     char comm[32];
     char cmdline[256];
     size_t cmdline_len;
+    vma_t *vma_list;
 } process_t;
 
 

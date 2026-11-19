@@ -2,10 +2,13 @@
 #include "mem/pmm.h"
 #include "mem/kheap.h"
 #include "kernel.h"
+#include "sched/process.h"
+#include "fs/vfs.h"
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include "drivers/klog.h"
 
 
 #define EARLY_PT_POOL_ENTRIES 128
@@ -47,7 +50,7 @@ static inline size_t pt_index(uintptr_t virt)   { return (virt >> 12) & 0x1FF; }
 static page_table_t *alloc_table_frame(uintptr_t *phys_out) {
     if (!vmm_dynamic_tables_ready) {
         if (early_pt_pool_used >= EARLY_PT_POOL_ENTRIES) {
-            serial_printf("[VMM] Early page table pool exhausted!\n");
+            klog_printf("[VMM] Early page table pool exhausted!\n");
             return NULL;
         }
 
@@ -339,7 +342,7 @@ void vmm_switch_pagemap(vmm_pagemap_t *map) {
     uint64_t rsp;
     __asm__ volatile("mov %%rsp, %0" : "=r"(rsp));
     if (rsp < 0xffff800000000000ULL) {
-        serial_printf("[PANIC] vmm_switch_pagemap called with user RSP=%#llx from %p!\n",
+        klog_printf("[PANIC] vmm_switch_pagemap called with user RSP=%#llx from %p!\n",
                       rsp, __builtin_return_address(0));
         hcf();
     }
@@ -520,36 +523,37 @@ vmm_pagemap_t *vmm_clone_pagemap(vmm_pagemap_t *src) {
                     pt_entry_t pte = src_pt->entries[pt_i];
                     if (!(pte & PTE_PRESENT)) continue;
 
-                    /* Calculate canonical virtual address for this page */
                     uint64_t virt = ((uint64_t)pml4_i << 39) |
                                     ((uint64_t)pdpt_i << 30) |
                                     ((uint64_t)pd_i   << 21) |
                                     ((uint64_t)pt_i   << 12);
-
-                    /* Sign extend canonical address if bit 47 is set */
                     if (virt & (1ULL << 47)) {
                         virt |= 0xFFFF000000000000ULL;
                     }
 
                     uintptr_t src_frame = pte & PTE_FRAME_ADDR_MASK;
-                    uint64_t flags = pte & 0xFFF; /* Preserve PTE_USER, PTE_WRITABLE, etc. */
+                    uint64_t flags = pte & PTE_FLAGS_MASK;
 
-                    /* Allocate dedicated physical frame for the child */
-                    uintptr_t new_frame = pmm_alloc_frame();
-                    if (!new_frame) {
-                        vmm_destroy_pagemap(dst);
-                        kfree(dst);
-                        return NULL;
+                    /* Device MMIO pages (e.g. /dev/fb0) are shared directly without CoW */
+                    if (src_frame >= pmm_get_highest_addr()) {
+                        if (vmm_map_page(dst, virt, src_frame, flags) != 0) {
+                            vmm_destroy_pagemap(dst);
+                            kfree(dst);
+                            return NULL;
+                        }
+                        continue;
                     }
 
-                    /* Deep copy the 4 KiB page content */
-                    memcpy((void *)hhdm_physical_to_virtual(new_frame),
-                           (void *)hhdm_physical_to_virtual(src_frame),
-                           PAGE_SIZE);
+                    /* Mark writable private RAM pages Read-Only + CoW in BOTH parent and child */
+                    if (flags & PTE_WRITABLE) {
+                        flags = (flags & ~PTE_WRITABLE) | PTE_COW;
+                        src_pt->entries[pt_i] = src_frame | flags;
+                    }
 
-                    /* Map into child's pagemap */
-                    if (vmm_map_page(dst, virt, new_frame, flags) != 0) {
-                        pmm_free_frame(new_frame);
+                    pmm_ref_frame(src_frame);
+
+                    if (vmm_map_page(dst, virt, src_frame, flags) != 0) {
+                        pmm_free_frame(src_frame);
                         vmm_destroy_pagemap(dst);
                         kfree(dst);
                         return NULL;
@@ -559,5 +563,141 @@ vmm_pagemap_t *vmm_clone_pagemap(vmm_pagemap_t *src) {
         }
     }
 
+    // TLB flush
+    if (vmm_read_cr3() == src->pml4_phys) {
+        vmm_write_cr3(src->pml4_phys);
+    }
+
     return dst;
+}
+
+void vma_add_file(process_t *proc, uintptr_t start, uintptr_t end,
+                  uint32_t flags, vfs_node_t *file, uint64_t file_offset) {
+    if (!proc || start >= end) return;
+
+    vma_remove(proc, start, end);
+
+    vma_t *node = (vma_t *)kmalloc(sizeof(vma_t));
+    if (!node) return;
+    node->start       = start;
+    node->end         = end;
+    node->flags       = flags;
+    node->file        = file;
+    node->file_offset = file_offset;
+    node->next        = NULL;
+
+    if (file) {
+        file->refcount++;
+    }
+
+    vma_t **curr = &proc->vma_list;
+    while (*curr && (*curr)->start < start) {
+        curr = &(*curr)->next;
+    }
+    node->next = *curr;
+    *curr = node;
+
+    /* Coalesce adjacent compatible VMAs (only anonymous VMAs for simplicity) */
+    vma_t *it = proc->vma_list;
+    while (it && it->next) {
+        if (!it->file && !it->next->file &&
+            it->end == it->next->start && it->flags == it->next->flags) {
+            vma_t *merged = it->next;
+            it->end = merged->end;
+            it->next = merged->next;
+            kfree(merged);
+        } else {
+            it = it->next;
+        }
+    }
+}
+
+void vma_add(process_t *proc, uintptr_t start, uintptr_t end, uint32_t flags) {
+    vma_add_file(proc, start, end, flags, NULL, 0);
+}
+
+vma_t *vma_find(process_t *proc, uintptr_t addr) {
+    if (!proc) return NULL;
+    for (vma_t *curr = proc->vma_list; curr; curr = curr->next) {
+        if (addr >= curr->start && addr < curr->end) {
+            return curr;
+        }
+        if (curr->start > addr) break;
+    }
+    return NULL;
+}
+
+void vma_remove(process_t *proc, uintptr_t start, uintptr_t end) {
+    if (!proc || start >= end) return;
+
+    vma_t **curr = &proc->vma_list;
+    while (*curr) {
+        vma_t *v = *curr;
+        if (v->end <= start || v->start >= end) {
+            curr = &v->next;
+            continue;
+        }
+
+        if (start <= v->start && end >= v->end) {
+            /* Fully covered: delete node */
+            *curr = v->next;
+            if (v->file && v->file->refcount > 0) v->file->refcount--;
+            kfree(v);
+        } else if (start > v->start && end < v->end) {
+            /* Hole punched in middle: split into two */
+            vma_t *right = (vma_t *)kmalloc(sizeof(vma_t));
+            if (right) {
+                right->start = end;
+                right->end   = v->end;
+                right->flags = v->flags;
+                right->file =  v->file;
+                right->file_offset = v->file ? (v->file_offset + (end - v->start)) : 0;
+                if (right->file) right->file->refcount++;
+                right->next  = v->next;
+                v->end       = start;
+                v->next      = right;
+            }
+            curr = &v->next;
+        } else if (start <= v->start) {
+            /* Trim left side */
+            v->start = end;
+            curr = &v->next;
+            if (v->file) {
+                v->file_offset += (end - v->start);
+            }
+            v->start = end;
+        } else {
+            /* Trim right side */
+            v->end = start;
+            curr = &v->next;
+        }
+    }
+}
+
+vma_t *vma_clone_list(vma_t *src_head) {
+    vma_t *dst_head = NULL;
+    vma_t **tail = &dst_head;
+
+    for (vma_t *s = src_head; s; s = s->next) {
+        vma_t *copy = (vma_t *)kmalloc(sizeof(vma_t));
+        if (!copy) {
+            vma_free_list(dst_head);
+            return NULL;
+        }
+        *copy = *s;
+        copy->next = NULL;
+        *tail = copy;
+        tail = &copy->next;
+        if (copy->file) copy->file->refcount++;
+    }
+    return dst_head;
+}
+
+void vma_free_list(vma_t *head) {
+    while (head) {
+        vma_t *next = head->next;
+        if (head->file) head->file->refcount--;
+        kfree(head);
+        head = next;
+    }
 }

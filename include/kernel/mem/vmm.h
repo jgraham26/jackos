@@ -24,6 +24,25 @@
 #define PTE_FRAME_ADDR_MASK 0x000FFFFFFFFFF000ULL
 #define PTE_FLAGS_MASK      0xFFF0000000000FFFULL
 
+#define PTE_COW           (1ULL << 9)
+
+#define VMA_READ          (1 << 0)
+#define VMA_WRITE         (1 << 1)
+#define VMA_EXEC          (1 << 2)
+#define VMA_ANON          (1 << 3)
+#define VMA_SHARED        (1 << 4)
+
+struct vfs_node;
+
+typedef struct vma {
+    uintptr_t start;    /* Page-aligned inclusive start */
+    uintptr_t end;      /* Page-aligned exclusive end */
+    uint32_t  flags;
+    struct vfs_node* file;
+    uint64_t file_offset;
+    struct vma *next;
+} vma_t;
+
 typedef uint64_t pt_entry_t;
 
 typedef struct page_table {
@@ -70,3 +89,12 @@ vmm_pagemap_t *vmm_clone_pagemap(vmm_pagemap_t *src);
 
 #define KERNEL_HEAP_BASE 0xFFFF900000000000ULL
 #define KERNEL_HEAP_MAX  0x40000000ULL /* 1 GiB virtual address space */
+
+
+struct process;
+void vma_add(struct process *proc, uintptr_t start, uintptr_t end, uint32_t flags);
+void vma_add_file(struct process *proc, uintptr_t start, uintptr_t end, uint32_t flags, struct vfs_node *file, uint64_t file_offset);
+vma_t *vma_find(struct process *proc, uintptr_t addr);
+void   vma_remove(struct process *proc, uintptr_t start, uintptr_t end);
+vma_t *vma_clone_list(vma_t *src_head);
+void   vma_free_list(vma_t *head);

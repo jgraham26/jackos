@@ -2,7 +2,7 @@
  * Automatically generated C config: don't edit
  * Busybox version: 1.36.1
  */
-#define AUTOCONF_TIMESTAMP "2026-11-18 18:02:17 EST"
+#define AUTOCONF_TIMESTAMP "2026-11-18 22:05:40 EST"
 
 #define CONFIG_HAVE_DOT_CONFIG 1
 #define ENABLE_HAVE_DOT_CONFIG 1
@@ -156,14 +156,10 @@
 /*
  * Build Options
  */
-#define CONFIG_STATIC 1
-#define ENABLE_STATIC 1
-#ifdef MAKE_SUID
-# define IF_STATIC(...) __VA_ARGS__ "CONFIG_STATIC"
-#else
-# define IF_STATIC(...) __VA_ARGS__
-#endif
-#define IF_NOT_STATIC(...)
+#undef CONFIG_STATIC
+#define ENABLE_STATIC 0
+#define IF_STATIC(...)
+#define IF_NOT_STATIC(...) __VA_ARGS__
 #undef CONFIG_PIE
 #define ENABLE_PIE 0
 #define IF_PIE(...)
@@ -2756,14 +2752,22 @@
 #define ENABLE_CHRT 0
 #define IF_CHRT(...)
 #define IF_NOT_CHRT(...) __VA_ARGS__
-#undef CONFIG_DMESG
-#define ENABLE_DMESG 0
-#define IF_DMESG(...)
-#define IF_NOT_DMESG(...) __VA_ARGS__
-#undef CONFIG_FEATURE_DMESG_PRETTY
-#define ENABLE_FEATURE_DMESG_PRETTY 0
-#define IF_FEATURE_DMESG_PRETTY(...)
-#define IF_NOT_FEATURE_DMESG_PRETTY(...) __VA_ARGS__
+#define CONFIG_DMESG 1
+#define ENABLE_DMESG 1
+#ifdef MAKE_SUID
+# define IF_DMESG(...) __VA_ARGS__ "CONFIG_DMESG"
+#else
+# define IF_DMESG(...) __VA_ARGS__
+#endif
+#define IF_NOT_DMESG(...)
+#define CONFIG_FEATURE_DMESG_PRETTY 1
+#define ENABLE_FEATURE_DMESG_PRETTY 1
+#ifdef MAKE_SUID
+# define IF_FEATURE_DMESG_PRETTY(...) __VA_ARGS__ "CONFIG_FEATURE_DMESG_PRETTY"
+#else
+# define IF_FEATURE_DMESG_PRETTY(...) __VA_ARGS__
+#endif
+#define IF_NOT_FEATURE_DMESG_PRETTY(...)
 #undef CONFIG_EJECT
 #define ENABLE_EJECT 0
 #define IF_EJECT(...)

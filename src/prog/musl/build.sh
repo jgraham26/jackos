@@ -4,7 +4,7 @@
     --prefix=/usr \
     --syslibdir=/usr/lib \
     --target=x86_64 \
-    --disable-shared \
+    --enable-shared \
     --enable-static
 
 make -j$(nproc)

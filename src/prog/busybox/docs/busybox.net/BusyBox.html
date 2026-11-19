@@ -60,11 +60,12 @@
 
 <p>Currently available applets include:</p>
 
-<pre><code>ash, awk, busybox, cat, clear, cp, cut, date, dd, echo, egrep, env,
-false, fbset, fgrep, free, grep, gunzip, gzip, halt, head, hexdump,
-id, less, ln, ls, mkdir, mv, poweroff, printenv, printf, ps, pwd,
-reboot, rm, rmdir, sed, sh, sleep, sort, tail, tar, tee, top, tr,
-true, uname, uniq, usleep, vi, wc, whoami, xargs, xxd, yes, zcat</code></pre>
+<pre><code>ash, awk, busybox, cat, clear, cp, cut, date, dd, dmesg, echo,
+egrep, env, false, fbset, fgrep, free, grep, gunzip, gzip, halt,
+head, hexdump, id, less, ln, ls, mkdir, mv, poweroff, printenv,
+printf, ps, pwd, reboot, rm, rmdir, sed, sh, sleep, sort, tail, tar,
+tee, top, tr, true, uname, uniq, usleep, vi, wc, whoami, xargs, xxd,
+yes, zcat</code></pre>
 
 <h1 id="COMMAND-DESCRIPTIONS">COMMAND DESCRIPTIONS</h1>
 
@@ -116,6 +117,12 @@ true, uname, uniq, usleep, vi, wc, whoami, xargs, xxd, yes, zcat</code></pre>
 <dd>
 
 <p>dd [if=FILE] [of=FILE] [ibs=N obs=N/bs=N] [count=N] [skip=N] [seek=N] [conv=notrunc|noerror|sync|fsync] [iflag=skip_bytes|count_bytes|fullblock|direct] [oflag=seek_bytes|append|direct]</p>
+
+</dd>
+<dt id="dmesg"><b>dmesg</b></dt>
+<dd>
+
+<p>dmesg [-cr] [-n LEVEL] [-s SIZE]</p>
 
 </dd>
 <dt id="echo"><b>echo</b></dt>

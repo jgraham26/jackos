@@ -1,6 +1,9 @@
 #pragma once
 
 #include <stddef.h>
+#include <stdarg.h>
+
+typedef void (*putc_fn_t)(char c, void* ctx);
 
 void serial_puts(const char* str);
 int serial_printf(const char *fmt, ...);
@@ -9,6 +12,7 @@ void puts(const char *str);
 void putchar(char c);
 int printf(const char* fmt, ...);
 int snprintf(char *str, size_t size, const char *fmt, ...);
+int custom_vcbprintf(putc_fn_t putc_fn, void *ctx, const char *fmt, va_list args);
 
 #ifndef SEEK_SET
 #define SEEK_SET 0 /* Seek relative to the beginning of the file */

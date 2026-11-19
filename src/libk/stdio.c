@@ -20,8 +20,6 @@ static void putchar_int(char c, void* ctx) {
     putchar(c);
 }
 
-typedef void (*putc_fn_t)(char c, void* ctx);
-
 static int emit_string(putc_fn_t putc_fn, void *ctx, const char *str, int precision, int width, int pad_zero, int left_align) {
     int count = 0;
     int len = 0;

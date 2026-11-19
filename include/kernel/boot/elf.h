@@ -17,6 +17,12 @@
 #define PT_PHDR    6
 #define PT_TLS     7
 
+#define ET_EXEC 2
+#define ET_DYN  3
+
+#define PIE_LOAD_BASE    0x0000000000400000ULL
+#define INTERP_LOAD_BASE 0x00007F0000000000ULL
+
 #define PF_X 0x1
 #define PF_W 0x2
 #define PF_R 0x4
@@ -52,9 +58,6 @@ typedef struct {
 bool elf_validate(const elf64_ehdr_t *hdr);
 process_t *elf_load_process(const void *elf_data, size_t size);
 
-#include <stdint.h>
-#include <stddef.h>
-
 #define AT_NULL   0   /* End of vector */
 #define AT_IGNORE 1   /* Entry should be ignored */
 #define AT_EXECFD 2   /* File descriptor of program */
@@ -78,18 +81,23 @@ typedef struct {
     uint64_t a_val;
 } elf64_auxv_t;
 
-int elf_load_binary_into_pagemap(const void *elf_data, 
-                                 size_t size, 
-                                 vmm_pagemap_t *dst_map, 
-                                 uintptr_t *entry_out, 
+int elf_load_binary_into_pagemap(const void *elf_data,
+                                 size_t size,
+                                 vmm_pagemap_t *dst_map,
+                                 uintptr_t load_bias,
+                                 uintptr_t *entry_out,
                                  uintptr_t *heap_start_out,
                                  uintptr_t *phdr_vaddr_out,
-                                 elf64_ehdr_t *saved_ehdr);
+                                 elf64_ehdr_t *saved_ehdr,
+                                 char *interp_path_out,
+                                 size_t interp_path_max);
 
-uintptr_t setup_user_stack(vmm_pagemap_t *pagemap, 
+uintptr_t setup_user_stack(vmm_pagemap_t *pagemap,
                            uintptr_t stack_top_virt,
-                           const elf64_ehdr_t *ehdr, 
+                           const elf64_ehdr_t *ehdr,
                            uintptr_t phdr_vaddr,
-                           int argc, 
-                           const char *argv[], 
+                           uintptr_t main_entry,
+                           uintptr_t interp_base,
+                           int argc,
+                           const char *argv[],
                            const char *envp[]);

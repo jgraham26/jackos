@@ -2,9 +2,8 @@
 #include "sched/process.h"
 #include "sched/sched.h"
 #include "sched/spinlock.h"
-#include <stdio.h>
+#include "drivers/klog.h"
 #include "mem/uaccess.h"
-#include "cpu/syscall.h"
 #include <string.h>
 
 extern spinlock_t s_sched_lock;
@@ -77,7 +76,7 @@ void handle_pending_signals(struct syscall_saved_regs *regs, int64_t *sys_ret_ra
         /* 1. Default action (SIG_DFL) */
         if (act->sa_handler == SIG_DFL) {
             if (sig == SIGINT || sig == SIGKILL || sig == SIGTERM || sig == SIGSEGV) {
-                serial_printf("[SIGNAL] Process PID %llu killed by signal %d\n", proc->pid, sig);
+                klog_printf("[SIGNAL] Process PID %llu killed by signal %d\n", proc->pid, sig);
                 sys_exit(128 + sig);
             }
             /* Other default signals like SIGCHLD are ignored */
@@ -101,7 +100,7 @@ void handle_pending_signals(struct syscall_saved_regs *regs, int64_t *sys_ret_ra
         /* Verify user stack memory is accessible and writable */
         if (!validate_user_buffer((void *)(user_rsp - sizeof(uint64_t)),
                                   sizeof(ucontext_frame_t) + sizeof(uint64_t))) {
-            serial_printf("[SIGNAL] Stack overflow/invalid stack for PID %llu\n", proc->pid);
+            klog_printf("[SIGNAL] Stack overflow/invalid stack for PID %llu\n", proc->pid);
             sys_exit(128 + SIGSEGV);
             return;
         }

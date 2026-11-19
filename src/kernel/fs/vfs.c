@@ -2,6 +2,7 @@
 #include "mem/kheap.h"
 #include <string.h>
 #include "sched/process.h"
+#include "drivers/klog.h"
 #include <stdio.h>
 #include <errno.h>
 
@@ -355,43 +356,43 @@ void *vfs_read_entire_file(const char *path, size_t *out_size) {
 
     vfs_file_t *file = vfs_open(path, O_RDONLY);
     if (!file) {
-        serial_printf("[VFS] vfs_open('%s') returned NULL\n", path);
+        klog_printf("[VFS] vfs_open('%s') returned NULL\n", path);
         return NULL;
     }
 
     if (!file->node) {
-        serial_printf("[VFS] file->node is NULL for '%s'\n", path);
+        klog_printf("[VFS] file->node is NULL for '%s'\n", path);
         vfs_close(file);
         return NULL;
     }
 
     if (file->node->flags & VFS_DIRECTORY) {
-        serial_printf("[VFS] '%s' is a directory, not a regular file\n", path);
+        klog_printf("[VFS] '%s' is a directory, not a regular file\n", path);
         vfs_close(file);
         return NULL;
     }
 
     size_t file_size = file->node->size;
     if (file_size == 0) {
-        serial_printf("[VFS] '%s' reports size == 0\n", path);
+        klog_printf("[VFS] '%s' reports size == 0\n", path);
         vfs_close(file);
         return NULL;
     }
 
     void *buf = kmalloc(file_size);
     if (!buf) {
-        serial_printf("[VFS] kmalloc(%llu) failed for '%s'\n", (uint64_t)file_size, path);
+        klog_printf("[VFS] kmalloc(%llu) failed for '%s'\n", (uint64_t)file_size, path);
         vfs_close(file);
         return NULL;
     }
 
     int64_t bytes_read = vfs_read(file, buf, file_size);
-    serial_printf("[VFS] Read %lld / %llu bytes from '%s'\n", bytes_read, (uint64_t)file_size, path);
+    klog_printf("[VFS] Read %lld / %llu bytes from '%s'\n", bytes_read, (uint64_t)file_size, path);
 
     vfs_close(file);
 
     if (bytes_read != (int64_t)file_size) {
-        serial_printf("[VFS] Read size mismatch! Expected %llu, got %lld\n",
+        klog_printf("[VFS] Read size mismatch! Expected %llu, got %lld\n",
                       (uint64_t)file_size, bytes_read);
         kfree(buf);
         return NULL;

@@ -41,6 +41,13 @@ trap 'rm -rf "${STAGE_ROOT}"' EXIT
 cp -a "${ROOTFS_DIR}/." "${STAGE_ROOT}/"
 [[ -f "${DOOM_BIN}" ]] && cp "${DOOM_BIN}" "${STAGE_ROOT}/doom"
 [[ -f "${DOOM_WAD}" ]] && cp "${DOOM_WAD}" "${STAGE_ROOT}/DOOM1.WAD"
+mkdir -p "${STAGE_ROOT}/lib" "${STAGE_ROOT}/usr/lib" "${STAGE_ROOT}/etc"
+cp -fL "${ROOTFS_DIR}/usr/lib/libc.so" "${STAGE_ROOT}/lib/libc.so"
+chmod 755 "${STAGE_ROOT}/lib/libc.so"
+ln -sf libc.so "${STAGE_ROOT}/lib/ld-musl-x86_64.so.1"
+ln -sf ../../lib/libc.so "${STAGE_ROOT}/usr/lib/libc.so"
+printf "/lib\n/usr/lib\n" > "${STAGE_ROOT}/etc/ld-musl-x86_64.path"
+
 
 # Partition 2 starts at 21 MiB (43 MiB remaining)
 EXT2_IMG="${BUILD_DIR}/rootfs.ext2"

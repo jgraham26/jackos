@@ -1,12 +1,11 @@
 #include "fs/devfs.h"
 #include "boot/bootinfo.h"
-#include "cpu/syscall.h"
+#include "drivers/klog.h"
 #include "fs/vfs.h"
 #include "fs/bdev.h"
 #include "mem/kheap.h"
 #include "drivers/serial.h"
 #include "drivers/ps2_kbd.h"
-#include "cpu/idt.h"
 #include "sched/sched.h"
 #include "drivers/terminal.h"
 #include <stdint.h>
@@ -249,7 +248,7 @@ static int64_t dev_console_ioctl(vfs_file_t *file, uint64_t request, void *arg) 
         case TCSETSF:
             if (!arg) return -EFAULT;
             memcpy(&s_console_termios, arg, sizeof(struct termios));
-            serial_printf("[TTY] TCSETS lflag=%#x iflag=%#x\n",
+            klog_printf("[TTY] TCSETS lflag=%#x iflag=%#x\n",
                           s_console_termios.c_lflag, s_console_termios.c_iflag);            memcpy(&s_console_termios, arg, sizeof(struct termios));
             return 0;
 

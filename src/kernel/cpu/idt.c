@@ -1,11 +1,18 @@
 #include "cpu/idt.h"
 #include "cpu/apic.h"
 #include "drivers/ps2_kbd.h"
+#include "fs/vfs.h"
 #include "kernel.h"
+#include "mem/vmm.h"
+#include "mem/pagecache.h"
+#include "sched/process.h"
 #include "sched/sched.h"
+#include "mem/pmm.h"
 #include "string.h"
 #include "io.h"
+#include <stddef.h>
 #include <stdint.h>
+#include "drivers/klog.h"
 #include <stdio.h>
 
 static idt_entry_t idt_entries[IDT_MAX_ENTRIES];
@@ -103,42 +110,159 @@ void sent_pic_eoi(uint8_t vector) {
     outb(0x20, 0x20);
 }
 
+static bool handle_page_fault(interrupt_frame_t *frame, uint64_t cr2) {
+    if (cr2 >= 0x0000800000000000ULL) {
+        return false;
+    }
+
+    process_t *proc = g_current_thread ? g_current_thread->process : NULL;
+    if (!proc || !proc->pagemap) {
+        return false;
+    }
+
+    uintptr_t page_vaddr = cr2 & ~(PAGE_SIZE - 1);
+    bool present = (frame->err_code & (1ULL << 0)) != 0;
+    bool write   = (frame->err_code & (1ULL << 1)) != 0;
+
+    /* Case 1: Protection violation on a present page -> check Copy-on-Write */
+    if (present) {
+        if (!write) {
+            return false; /* Read/exec permission fault */
+        }
+
+        pt_entry_t *pte = vmm_get_pte(proc->pagemap, page_vaddr);
+        if (!pte || !(*pte & PTE_PRESENT) || !(*pte & PTE_COW)) {
+            return false; /* Genuine write to read-only page (e.g. .rodata) */
+        }
+
+        uintptr_t old_phys = *pte & PTE_FRAME_ADDR_MASK;
+        uint64_t flags = (*pte & PTE_FLAGS_MASK & ~PTE_COW) | PTE_WRITABLE;
+
+        if (pmm_get_refcount(old_phys) <= 1) {
+            /* Sole remaining owner: reclaim write permission in-place with zero copy */
+            *pte = old_phys | flags;
+            vmm_invlpg(page_vaddr);
+            return true;
+        }
+
+        /* Shared by multiple processes or page cache: allocate private copy */
+        uintptr_t new_phys = pmm_alloc_frame();
+        if (!new_phys) {
+            return false; /* OOM */
+        }
+
+        memcpy((void *)hhdm_physical_to_virtual(new_phys),
+               (void *)hhdm_physical_to_virtual(old_phys),
+               PAGE_SIZE);
+
+        *pte = new_phys | flags;
+        pmm_free_frame(old_phys); /* Decrements old_phys refcount */
+        vmm_invlpg(page_vaddr);
+        return true;
+    }
+
+    /* Case 2: Non-present page -> check Demand Paging VMA */
+    vma_t *vma = vma_find(proc, page_vaddr);
+    if (!vma) {
+        return false;
+    }
+    if (write && !(vma->flags & VMA_WRITE)) {
+        return false;
+    }
+
+    bool is_ro_file = (vma->file != NULL) && !(vma->flags & VMA_WRITE);
+    uint64_t file_off = vma->file ? (vma->file_offset + (page_vaddr - vma->start)) : 0;
+
+    uintptr_t phys = 0;
+    if (is_ro_file) {
+        phys = pagecache_lookup(vma->file, file_off);
+    }
+
+    if (!phys) {
+        phys = pmm_alloc_frame();
+        if (!phys) {
+            return false; /* OOM */
+        }
+
+        void *page_kptr = (void *)hhdm_physical_to_virtual(phys);
+        memset(page_kptr, 0, PAGE_SIZE);
+
+        if (vma->file && vma->file->ops && vma->file->ops->read) {
+            if (file_off < vma->file->size) {
+                size_t to_read = PAGE_SIZE;
+                if (file_off + to_read > vma->file->size) {
+                    to_read = vma->file->size - (size_t)file_off;
+                }
+                vfs_file_t tmp_file = {
+                    .node     = vma->file,
+                    .offset   = file_off,
+                    .flags    = O_RDONLY,
+                    .refcount = 1
+                };
+                vma->file->ops->read(&tmp_file, page_kptr, to_read);
+            }
+
+            if (is_ro_file) {
+                pagecache_insert(vma->file, file_off, phys);
+            }
+        }
+    }
+
+    uint64_t pte_flags = PTE_PRESENT | PTE_USER;
+    if (vma->flags & VMA_WRITE) {
+        pte_flags |= PTE_WRITABLE;
+    }
+
+    if (vmm_map_page(proc->pagemap, page_vaddr, phys, pte_flags) != 0) {
+        pmm_free_frame(phys);
+        return false;
+    }
+
+    return true;
+}
+
 interrupt_frame_t* interrupt_dispatcher(interrupt_frame_t* frame) {
     if (frame->vector == 0xFF) {
         return frame;
     }
     if (frame->vector < 32) {
-        const char* msg = (frame->vector < 32) ? exception_messages[frame->vector] : "Reserved";
-        serial_printf("CPU EXCEPTION: %s on TID %llu\n", msg, g_current_thread ? g_current_thread->tid : 0);
 
         uint64_t cr2 = 0;
         if (frame->vector == 14) {
             __asm__ volatile("mov %%cr2, %0" : "=r"(cr2));
-            serial_printf("[PAGE FAULT]\n");
-            serial_printf("  CR2 (Faulting Addr): %#llx\n", cr2);
-            serial_printf("  RIP:                 %#llx\n", frame->rip);
-            serial_printf("  CS:                  %#llx\n", frame->cs);
-            serial_printf("  RSP:                 %#llx\n", frame->rsp);
-            serial_printf("  Error Code:          %#llx\n", frame->err_code);
+            if (handle_page_fault(frame, cr2)) {
+                return frame;
+            }
+            klog_printf("[PAGE FAULT] Unhandled CR2=%#llx RIP=%#llx CS=%#llx RSP=%#llx err=%#llx\n",
+                          cr2, frame->rip, frame->cs, frame->rsp, frame->err_code);
+            
+            if ((frame->cs & 0x03) == 0x03 && g_current_thread && g_current_thread->process) {
+                kernel_send_signal(g_current_thread->process, SIGSEGV);
+                sys_exit(128 + SIGSEGV);
+            }
+            hcf();
         } else if (frame->vector == 13) {
             cli();
-            serial_printf("Faulting RIP:    %#llx\n", frame->rip);
-            serial_printf("Faulting CS:     %#llx\n", frame->cs);
-            serial_printf("Faulting RFLAGS: %#llx\n", frame->rflags);
-            serial_printf("Faulting RSP:    %#llx\n", frame->rsp);
-            serial_printf("Faulting SS:     %#llx\n", frame->ss);
+            klog_printf("Faulting RIP:    %#llx\n", frame->rip);
+            klog_printf("Faulting CS:     %#llx\n", frame->cs);
+            klog_printf("Faulting RFLAGS: %#llx\n", frame->rflags);
+            klog_printf("Faulting RSP:    %#llx\n", frame->rsp);
+            klog_printf("Faulting SS:     %#llx\n", frame->ss);
             for (;;) __asm__ volatile("hlt");
         } else {
             uint64_t cr2 = 0, cr3 = 0;
             __asm__ volatile("mov %%cr2, %0" : "=r"(cr2));
             __asm__ volatile("mov %%cr3, %0" : "=r"(cr3));
             const char* msg = exception_messages[frame->vector];
-            serial_printf("CPU EXCEPTION %llu (%s) on TID %llu\n",
+            klog_printf("CPU EXCEPTION %llu (%s) on TID %llu\n",
                           frame->vector, msg, g_current_thread ? g_current_thread->tid : 0);
-            serial_printf("  RIP=%#llx CS=%#llx RSP=%#llx CR2=%#llx CR3=%#llx err=%#llx\n",
+            klog_printf("  RIP=%#llx CS=%#llx RSP=%#llx CR2=%#llx CR3=%#llx err=%#llx\n",
                           frame->rip, frame->cs, frame->rsp, cr2, cr3, frame->err_code);
             hcf();
         }
+
+        const char* msg = (frame->vector < 32) ? exception_messages[frame->vector] : "Reserved";
+        klog_printf("CPU EXCEPTION: %s on TID %llu\n", msg, g_current_thread ? g_current_thread->tid : 0);
 
         bochs_breakpoint();
 

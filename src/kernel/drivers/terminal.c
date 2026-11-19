@@ -2,9 +2,9 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <string.h>
 
+#include "drivers/klog.h"
 #include "boot/multiboot2.h"
 #include "boot/bootinfo.h"
 #include "kernel.h"
@@ -146,7 +146,7 @@ static void cursor_show(void) {
 
 void init_terminal(const struct boot_info *info) {
     if (!info || !info->fb.is_present) {
-        serial_printf("Error: Framebuffer not present in boot_info\n");
+        klog_printf("Error: Framebuffer not present in boot_info\n");
         hcf();
     }
 

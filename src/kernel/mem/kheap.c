@@ -2,6 +2,7 @@
 #include "mem/vmm.h"
 #include "mem/pmm.h"
 #include "sched/spinlock.h"
+#include "drivers/klog.h"
 #include "kernel.h"
 #include <stdio.h>
 #include <string.h>
@@ -40,7 +41,7 @@ static bool kheap_expand(size_t bytes) {
     for (uintptr_t virt = s_heap_curr_top; virt < new_top; virt += PAGE_SIZE) {
         uintptr_t frame = pmm_alloc_frame();
         if (!frame) {
-            serial_printf("[KHEAP] failed to allocate new physical frame\n");
+            klog_printf("[KHEAP] failed to allocate new physical frame\n");
             pmm_dump();
             return false;
         }

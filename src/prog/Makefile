@@ -3,8 +3,8 @@ LD      := x86_64-jackos-ld
 ASM     := nasm
 
 SYSROOT := $(abspath root)
-CFLAGS  := -ffreestanding -O2 --sysroot=$(SYSROOT)
-LDFLAGS := -T user.ld -L$(SYSROOT)/usr/lib -lc
+CFLAGS  := -O2 --sysroot=$(SYSROOT) -fno-pie
+LDFLAGS := --sysroot=$(SYSROOT) -no-pie -Wl,--dynamic-linker,/lib/ld-musl-x86_64.so.1
 
 .PHONY: all clean musl busybox init rootfs
 

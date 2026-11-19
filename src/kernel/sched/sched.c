@@ -14,7 +14,7 @@
 #include "mem/vmm.h"
 #include "cpu/fpu.h"
 #include "cpu/syscall.h"
-#include <stdio.h>
+#include "drivers/klog.h"
 #include "cpu/percpu.h"
 
 #define MSR_FS_BASE 0xC0000100
@@ -319,7 +319,7 @@ interrupt_frame_t *sched_schedule(interrupt_frame_t *current_frame) {
                 if (proc->sig_actions[sig].sa_handler == SIG_DFL) {
                     if (sig == SIGINT || sig == SIGKILL || sig == SIGTERM || sig == SIGSEGV) {
                         proc->sig_pending &= ~(1U << sig);
-                        serial_printf("[SIGNAL] Process PID %llu killed by signal %d via scheduler\n",
+                        klog_printf("[SIGNAL] Process PID %llu killed by signal %d via scheduler\n",
                                       proc->pid, sig);
                         sys_exit(128 + sig);
                     }

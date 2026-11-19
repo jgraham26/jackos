@@ -2,6 +2,7 @@
 #include "fs/ext2.h"
 #include "fs/vfs.h"
 #include "mem/kheap.h"
+#include "drivers/klog.h"
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
@@ -333,7 +334,7 @@ vfs_node_t *ext2_mount(block_device_t *bdev) {
 
     ext2_superblock_t *sb = (ext2_superblock_t *)sb_buf;
     if (sb->s_magic != EXT2_SUPER_MAGIC) {
-        serial_printf("[EXT2] Bad magic: 0x%04X (expected 0xEF53)\n", sb->s_magic);
+        klog_printf("[EXT2] Bad magic: 0x%04X (expected 0xEF53)\n", sb->s_magic);
         return NULL;
     }
 
@@ -363,7 +364,7 @@ vfs_node_t *ext2_mount(block_device_t *bdev) {
         ext2_read_block(fs, bgdt_block + i, ((uint8_t *)fs->bgdt) + (i * fs->block_size));
     }
 
-    serial_printf("[EXT2] Mounted volume '%s', block_size=%u, inodes=%u\n",
+    klog_printf("[EXT2] Mounted volume '%s', block_size=%u, inodes=%u\n",
                   fs->sb.s_volume_name[0] ? fs->sb.s_volume_name : "unnamed",
                   fs->block_size, fs->sb.s_inodes_count);
 
@@ -732,13 +733,13 @@ static int ext2_node_symlink(vfs_node_t *parent, const char *name, const char *t
 }
 
 static vfs_node_t *ext2_node_create(vfs_node_t *parent, const char *name, uint32_t mode) {
-    serial_printf("[ext2_create] Creating '%s' in parent inode %u\n", name, parent->inode);
+    klog_printf("[ext2_create] Creating '%s' in parent inode %u\n", name, parent->inode);
     if (!parent || !parent->priv || !name) return NULL;
     ext2_node_priv_t *parent_priv = (ext2_node_priv_t *)parent->priv;
     ext2_fs_t *fs = parent_priv->fs;
 
     uint32_t ino = ext2_alloc_inode(fs, 0);
-    serial_printf("[ext2_create] ext2_alloc_inode returned ino=%u\n", ino);
+    klog_printf("[ext2_create] ext2_alloc_inode returned ino=%u\n", ino);
     if (!ino) return NULL;
 
     ext2_inode_t new_inode;
@@ -750,7 +751,7 @@ static vfs_node_t *ext2_node_create(vfs_node_t *parent, const char *name, uint32
     ext2_write_inode(fs, ino, &new_inode);
 
     int dir_res = ext2_add_dir_entry(fs, &parent_priv->inode, parent_priv->ino, ino, name, EXT2_FT_REG_FILE);
-    serial_printf("[ext2_create] ext2_add_dir_entry returned %d\n", dir_res);
+    klog_printf("[ext2_create] ext2_add_dir_entry returned %d\n", dir_res);
     if (dir_res != 0) {
         return NULL;
     }

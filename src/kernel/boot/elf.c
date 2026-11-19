@@ -1,6 +1,8 @@
 #include "boot/elf.h"
 #include "mem/vmm.h"
 #include "mem/pmm.h"
+#include "mem/kheap.h"
+#include "fs/vfs.h"
 #include "sched/sched.h"
 #include <string.h>
 #include <stdio.h>
@@ -18,32 +20,46 @@ bool elf_validate(const elf64_ehdr_t *hdr) {
 }
 
 static int elf_load_segments(const void *elf_data, size_t size, vmm_pagemap_t *pagemap,
-                             uintptr_t *highest_vaddr_out, uintptr_t *phdr_vaddr_out) {
+                             uintptr_t load_bias,
+                             uintptr_t *highest_vaddr_out, uintptr_t *phdr_vaddr_out,
+                             char *interp_path_out, size_t interp_path_max) {
     const elf64_ehdr_t *hdr = (const elf64_ehdr_t *)elf_data;
     const uint8_t *base = (const uint8_t *)elf_data;
     const elf64_phdr_t *phdrs = (const elf64_phdr_t *)(base + hdr->e_phoff);
 
     uintptr_t highest_vaddr = 0;
     uintptr_t phdr_vaddr = 0;
+    if (interp_path_out && interp_path_max > 0) {
+        interp_path_out[0] = '\0';
+    }
 
     for (uint16_t i = 0; i < hdr->e_phnum; i++) {
         const elf64_phdr_t *ph = &phdrs[i];
 
+        if (ph->p_type == PT_INTERP && interp_path_out && interp_path_max > 0) {
+            if (ph->p_offset + ph->p_filesz > size || ph->p_filesz == 0 ||
+                ph->p_filesz >= interp_path_max) {
+                return -1;
+            }
+            memcpy(interp_path_out, base + ph->p_offset, ph->p_filesz);
+            interp_path_out[ph->p_filesz] = '\0';
+            continue;
+        }
+
         if (ph->p_type != PT_LOAD || ph->p_memsz == 0) continue;
 
-        /* Verify file buffer has enough data */
         if (ph->p_offset + ph->p_filesz > size) {
-            serial_printf("[ELF] Corrupted binary: segment 0x%lx exceeds file size 0x%lx\n",
-                          ph->p_offset + ph->p_filesz, size);
             return -1;
         }
 
+        uintptr_t seg_vaddr = ph->p_vaddr + load_bias;
+
         if (hdr->e_phoff >= ph->p_offset && hdr->e_phoff < (ph->p_offset + ph->p_filesz)) {
-            phdr_vaddr = ph->p_vaddr + (hdr->e_phoff - ph->p_offset);
+            phdr_vaddr = seg_vaddr + (hdr->e_phoff - ph->p_offset);
         }
 
-        uint64_t vaddr_start = PAGE_ALIGN_DOWN(ph->p_vaddr);
-        uint64_t vaddr_end   = PAGE_ALIGN_UP(ph->p_vaddr + ph->p_memsz);
+        uint64_t vaddr_start = PAGE_ALIGN_DOWN(seg_vaddr);
+        uint64_t vaddr_end   = PAGE_ALIGN_UP(seg_vaddr + ph->p_memsz);
         if (vaddr_end > highest_vaddr) {
             highest_vaddr = vaddr_end;
         }
@@ -53,7 +69,6 @@ static int elf_load_segments(const void *elf_data, size_t size, vmm_pagemap_t *p
             flags |= PTE_WRITABLE;
         }
 
-        /* 1. Allocate & map all pages */
         for (uint64_t vaddr = vaddr_start; vaddr < vaddr_end; vaddr += PAGE_SIZE) {
             pt_entry_t *existing_pte = vmm_get_pte(pagemap, vaddr);
             if (!existing_pte || !(*existing_pte & PTE_PRESENT)) {
@@ -65,14 +80,13 @@ static int elf_load_segments(const void *elf_data, size_t size, vmm_pagemap_t *p
                 vmm_map_page(pagemap, vaddr, phys_frame, flags);
             } else if (ph->p_flags & PF_W) {
                 *existing_pte |= PTE_WRITABLE;
-                __asm__ volatile("invlpg (%0)" :: "r"(vaddr) : "memory");
+                vmm_invlpg(vaddr);
             }
         }
 
-        /* 2. Copy payload into pages */
         uint64_t copied = 0;
         while (copied < ph->p_filesz) {
-            uint64_t cur_vaddr = ph->p_vaddr + copied;
+            uint64_t cur_vaddr = seg_vaddr + copied;
             uint64_t page_base = PAGE_ALIGN_DOWN(cur_vaddr);
             uint64_t page_off  = cur_vaddr - page_base;
             uint64_t chunk     = PAGE_SIZE - page_off;
@@ -92,16 +106,18 @@ static int elf_load_segments(const void *elf_data, size_t size, vmm_pagemap_t *p
     }
 
     if (highest_vaddr_out) *highest_vaddr_out = highest_vaddr;
-    if (phdr_vaddr_out) *phdr_vaddr_out = phdr_vaddr;
+    if (phdr_vaddr_out)    *phdr_vaddr_out = phdr_vaddr;
     return 0;
 }
 
-uintptr_t setup_user_stack(vmm_pagemap_t *pagemap, 
+uintptr_t setup_user_stack(vmm_pagemap_t *pagemap,
                            uintptr_t stack_top_virt,
-                           const elf64_ehdr_t *ehdr, 
+                           const elf64_ehdr_t *ehdr,
                            uintptr_t phdr_vaddr,
-                           int argc, 
-                           const char *argv[], 
+                           uintptr_t main_entry,
+                           uintptr_t interp_base,
+                           int argc,
+                           const char *argv[],
                            const char *envp[]) {
 
     /* Locate the physical backing frame of the top stack page via HHDM */
@@ -165,16 +181,16 @@ uintptr_t setup_user_stack(vmm_pagemap_t *pagemap,
      *   argv: (argc + 1) words
      *   argc: 1 word
      */
-    size_t total_words = 14 + (envc + 1) + (argc + 1) + 1;
+    size_t total_words = 16 + (envc + 1) + (argc + 1) + 1;
     if (((offset - (total_words * 8)) % 16) != 0) {
-        /* Add 8 bytes of padding so the bottom (argc) is 16-byte aligned */
         PUSH64(0);
     }
 
     /* --- Auxiliary Vector --- */
     PUSH64(0); PUSH64(AT_NULL);
     PUSH64(u_rand_addr); PUSH64(AT_RANDOM);
-    PUSH64(ehdr->e_entry); PUSH64(AT_ENTRY);
+    PUSH64(main_entry); PUSH64(AT_ENTRY);
+    PUSH64(interp_base); PUSH64(AT_BASE);
     PUSH64(ehdr->e_phnum); PUSH64(AT_PHNUM);
     PUSH64(ehdr->e_phentsize); PUSH64(AT_PHENT);
     PUSH64(phdr_vaddr); PUSH64(AT_PHDR);
@@ -208,16 +224,47 @@ process_t *elf_load_process(const void *elf_data, size_t size) {
     process_t *proc = process_create();
     if (!proc) return NULL;
 
-    uintptr_t highest_vaddr = 0;
+    uintptr_t main_entry = 0;
+    uintptr_t heap_start = 0;
     uintptr_t phdr_vaddr = 0;
+    elf64_ehdr_t saved_ehdr;
+    char interp_path[VFS_MAX_PATH];
 
-    if (elf_load_segments(elf_data, size, proc->pagemap, &highest_vaddr, &phdr_vaddr) != 0) {
+    if (elf_load_binary_into_pagemap(elf_data, size, proc->pagemap, 0,
+                                     &main_entry, &heap_start, &phdr_vaddr,
+                                     &saved_ehdr, interp_path, sizeof(interp_path)) != 0) {
         process_destroy(proc);
         return NULL;
     }
 
-    proc->heap_start = highest_vaddr;
-    proc->heap_end   = highest_vaddr;
+    proc->heap_start = heap_start;
+    proc->heap_end   = heap_start;
+
+    uintptr_t start_rip   = main_entry;
+    uintptr_t interp_base = 0;
+
+    /* Support dynamically linked /bin/init via PT_INTERP */
+    if (interp_path[0] != '\0') {
+        size_t interp_size = 0;
+        void *interp_buf = vfs_read_entire_file(interp_path, &interp_size);
+        if (!interp_buf) {
+            process_destroy(proc);
+            return NULL;
+        }
+
+        uintptr_t interp_entry = 0;
+        if (elf_load_binary_into_pagemap(interp_buf, interp_size, proc->pagemap,
+                                         INTERP_LOAD_BASE, &interp_entry,
+                                         NULL, NULL, NULL, NULL, 0) != 0) {
+            kfree(interp_buf);
+            process_destroy(proc);
+            return NULL;
+        }
+        kfree(interp_buf);
+
+        interp_base = INTERP_LOAD_BASE;
+        start_rip   = interp_entry;
+    }
 
     /* Allocate user stack */
     for (uintptr_t s = USER_STACK_VIRT_TOP - (4 * PAGE_SIZE); s < USER_STACK_VIRT_TOP; s += PAGE_SIZE) {
@@ -237,14 +284,21 @@ process_t *elf_load_process(const void *elf_data, size_t size) {
     uintptr_t user_rsp = setup_user_stack(
         proc->pagemap,
         USER_STACK_VIRT_TOP,
-        hdr,
+        &saved_ehdr,
         phdr_vaddr,
+        main_entry,
+        interp_base,
         1,
         default_argv,
         default_envp
     );
 
-    thread_t *t = thread_create_user((void (*)(void))hdr->e_entry, proc->pagemap, proc, user_rsp);
+    if (!user_rsp) {
+        process_destroy(proc);
+        return NULL;
+    }
+
+    thread_t *t = thread_create_user((void (*)(void))start_rip, proc->pagemap, proc, user_rsp);
     if (!t) {
         process_destroy(proc);
         return NULL;
@@ -253,36 +307,35 @@ process_t *elf_load_process(const void *elf_data, size_t size) {
     return proc;
 }
 
-int elf_load_binary_into_pagemap(const void *elf_data, 
-                                 size_t size, 
-                                 vmm_pagemap_t *dst_map, 
-                                 uintptr_t *entry_out, 
+int elf_load_binary_into_pagemap(const void *elf_data,
+                                 size_t size,
+                                 vmm_pagemap_t *dst_map,
+                                 uintptr_t load_bias,
+                                 uintptr_t *entry_out,
                                  uintptr_t *heap_start_out,
                                  uintptr_t *phdr_vaddr_out,
-                                 elf64_ehdr_t *saved_ehdr) {
+                                 elf64_ehdr_t *saved_ehdr,
+                                 char *interp_path_out,
+                                 size_t interp_path_max) {
     const elf64_ehdr_t *hdr = (const elf64_ehdr_t *)elf_data;
     if (!elf_validate(hdr)) return -1;
+
+    if (hdr->e_type == ET_DYN && load_bias == 0) {
+        load_bias = PIE_LOAD_BASE;
+    }
 
     uintptr_t highest_vaddr = 0;
     uintptr_t phdr_vaddr = 0;
 
-    if (elf_load_segments(elf_data, size, dst_map, &highest_vaddr, &phdr_vaddr) != 0) {
+    if (elf_load_segments(elf_data, size, dst_map, load_bias,
+                          &highest_vaddr, &phdr_vaddr,
+                          interp_path_out, interp_path_max) != 0) {
         return -1;
     }
 
-    /* Allocate user stack */
-    for (uintptr_t s = USER_STACK_VIRT_TOP - (4 * PAGE_SIZE); s < USER_STACK_VIRT_TOP; s += PAGE_SIZE) {
-        uintptr_t frame = pmm_alloc_frame();
-        if (!frame) return -1;
-        void *kptr = (void *)hhdm_physical_to_virtual(frame);
-        memset(kptr, 0, PAGE_SIZE);
-        vmm_map_page(dst_map, s, frame, PTE_PRESENT | PTE_WRITABLE | PTE_USER);
-    }
-
-    if (entry_out) *entry_out = hdr->e_entry;
+    if (entry_out)      *entry_out = hdr->e_entry + load_bias;
     if (heap_start_out) *heap_start_out = highest_vaddr;
     if (phdr_vaddr_out) *phdr_vaddr_out = phdr_vaddr;
-    if (saved_ehdr) memcpy(saved_ehdr, hdr, sizeof(elf64_ehdr_t));
-
+    if (saved_ehdr)     memcpy(saved_ehdr, hdr, sizeof(elf64_ehdr_t));
     return 0;
 }

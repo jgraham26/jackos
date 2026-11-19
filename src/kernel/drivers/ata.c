@@ -47,6 +47,20 @@ static int ata_wait_not_busy(void) {
     return -1;
 }
 
+static inline void insw_bulk(uint16_t port, void *addr, uint32_t count) {
+    __asm__ volatile("rep insw"
+                     : "+D"(addr), "+c"(count)
+                     : "d"(port)
+                     : "memory");
+}
+
+static inline void outsw_bulk(uint16_t port, const void *addr, uint32_t count) {
+    __asm__ volatile("rep outsw"
+                     : "+S"(addr), "+c"(count)
+                     : "d"(port)
+                     : "memory");
+}
+
 /* Poll until BSY clears and DRQ sets (or error occurs). */
 static int ata_wait_ready_for_data(void) {
     uint32_t timeout = 100000;
@@ -133,14 +147,11 @@ int ata_read_sectors(uint32_t lba, uint8_t sector_count, void *buf) {
             return -1;
         }
 
-        /* Read 256 16-bit words per sector */
-        for (int i = 0; i < 256; i++) {
-            *dest++ = inw(ATA_PRIMARY_DATA);
-        }
-
-        ata_400ns_delay();
+        insw_bulk(ATA_PRIMARY_DATA, dest, 256);
+    
+        dest += 256;
     }
-
+    
     return 0;
 }
 

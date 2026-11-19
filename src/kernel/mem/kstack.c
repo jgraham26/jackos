@@ -3,7 +3,7 @@
 #include "mem/vmm.h"
 #include "mem/pmm.h"
 #include <string.h>
-#include <stdio.h>
+#include "drivers/klog.h"
 
 static uintptr_t s_next_slot_addr = KSTACK_REGION_BASE;
 
@@ -25,7 +25,7 @@ void kstack_init(void) {
     }
 
     uint64_t pml4_idx = (KSTACK_REGION_BASE >> 39) & 0x1FF;
-    serial_printf("[KSTACK] Pinned PML4[%llu] = %#llx\n",
+    klog_printf("[KSTACK] Pinned PML4[%llu] = %#llx\n",
                   pml4_idx, kmap->pml4->entries[pml4_idx]);
 }
 

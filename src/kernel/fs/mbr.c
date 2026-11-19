@@ -2,6 +2,7 @@
 #include "fs/devfs.h"
 #include "mem/kheap.h"
 #include <string.h>
+#include "drivers/klog.h"
 #include <stdio.h>
 
 typedef struct {
@@ -59,7 +60,7 @@ int mbr_scan_and_register(block_device_t *parent_dev) {
         bdev_register(part_bdev);
         devfs_register_bdev(part_bdev);
 
-        serial_printf("[MBR] Registered partition %s: LBA %u..%u (type 0x%02X)\n",
+        klog_printf("[MBR] Registered partition %s: LBA %u..%u (type 0x%02X)\n",
                       part_bdev->name, entry->starting_lba,
                       entry->starting_lba + entry->total_sectors - 1,
                       entry->system_id);

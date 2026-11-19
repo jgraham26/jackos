@@ -14,3 +14,5 @@ typedef int64_t intptr_t;
 typedef uint64_t uintptr_t;
 
 #define INT64_MAX (~(int64_t)0x0)
+#define UINT64_MAX (~(uint64_t)0x0)
+#define UINT16_MAX 0xFFFF

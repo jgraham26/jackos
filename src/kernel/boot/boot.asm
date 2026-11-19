@@ -15,8 +15,8 @@ framebuffer_tag_start:
     dw 5                                               ; Type: framebuffer[cite: 9]
     dw 0                                               ; Flags
     dd framebuffer_tag_end - framebuffer_tag_start     ; Size: 20 (0x14)[cite: 9]
-    dd 1024                                            ; Width (0x400)[cite: 9]
-    dd 768                                             ; Height (0x300)[cite: 9]
+    dd 1920                                            ; Width (0x400)[cite: 9]
+    dd 1080                                             ; Height (0x300)[cite: 9]
     dd 32                                              ; Depth (0x20)[cite: 9]
 framebuffer_tag_end:
 

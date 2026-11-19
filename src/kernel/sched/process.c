@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <string.h>
 #include <stdio.h>
 #include "sched/process.h"
@@ -13,6 +14,7 @@
 #include "boot/elf.h"
 #include "io.h"
 #include "mem/kstack.h"
+#include "drivers/klog.h"
 #include "stdbool.h"
 #include <errno.h>
 
@@ -185,6 +187,9 @@ void process_destroy(process_t *proc) {
         kfree(proc->pagemap);
     }
 
+    vma_free_list(proc->vma_list);
+    proc->vma_list = NULL;
+
     uint64_t flags = spinlock_irqsave(&s_sched_lock);
     process_t **curr = &g_process_list_head;
     while (*curr) {
@@ -233,6 +238,8 @@ int64_t sys_fork(syscall_saved_regs_t *regs) {
         kfree(child_proc);
         return -ENOMEM;
     }
+
+    child_proc->vma_list = vma_clone_list(parent_proc->vma_list);
 
     thread_t *child_thread = (thread_t *)kmalloc(sizeof(thread_t));
     if (!child_thread) {
@@ -555,7 +562,7 @@ int64_t sys_execve(const char *path, char *const argv[], char *const envp[], sys
     }
     proc->cmdline_len = pos;
     
-    serial_printf("[EXECVE] kpath='%s' argc=%d envc=%d\n", kpath, argc, envc);
+    klog_printf("[EXECVE] kpath='%s' argc=%d envc=%d\n", kpath, argc, envc);
     /* 4. Open and read executable binary via VFS (resolving #! shebangs up to 4 hops) */
     int shebang_depth = 0;
     size_t file_size = 0;
@@ -564,7 +571,7 @@ int64_t sys_execve(const char *path, char *const argv[], char *const envp[], sys
     while (1) {
         vfs_file_t *file = vfs_open(kpath, 0);
         if (!file) {
-            serial_printf("[EXECVE] FAIL: vfs_open('%s') returned NULL\n", kpath);
+            klog_printf("[EXECVE] FAIL: vfs_open('%s') returned NULL\n", kpath);
             err_code = -ENOENT;
             goto cleanup_env;
         }
@@ -578,7 +585,7 @@ int64_t sys_execve(const char *path, char *const argv[], char *const envp[], sys
 
         file_buf = (uint8_t *)kmalloc(file_size);
         if (!file_buf) {
-            serial_printf("[EXECVE] FAIL: kmalloc(%llu) OOM!\n", (uint64_t)file_size);
+            klog_printf("[EXECVE] FAIL: kmalloc(%llu) OOM!\n", (uint64_t)file_size);
             vfs_close(file);
             err_code = -ENOMEM;
             goto cleanup_env;
@@ -675,14 +682,15 @@ int64_t sys_execve(const char *path, char *const argv[], char *const envp[], sys
         goto cleanup_env;
     }
 
-    uintptr_t entry_point = 0;
+    uintptr_t main_entry = 0;
     uintptr_t heap_start = 0;
     uintptr_t phdr_vaddr = 0;
     elf64_ehdr_t ehdr;
+    char interp_path[VFS_MAX_PATH];
 
-    if (elf_load_binary_into_pagemap(file_buf, file_size, new_pagemap,
-                                     &entry_point, &heap_start,
-                                     &phdr_vaddr, &ehdr) != 0) {
+    if (elf_load_binary_into_pagemap(file_buf, file_size, new_pagemap, 0,
+                                     &main_entry, &heap_start,
+                                     &phdr_vaddr, &ehdr, interp_path, sizeof(interp_path)) != 0) {
         vmm_destroy_pagemap(new_pagemap);
         kfree(new_pagemap);
         kfree(file_buf);
@@ -692,12 +700,56 @@ int64_t sys_execve(const char *path, char *const argv[], char *const envp[], sys
 
     kfree(file_buf);
 
+    uintptr_t start_rip = main_entry;
+    uintptr_t interp_base = 0;
+
+    if (interp_path[0] != '\0') {
+        size_t interp_size = 0;
+        void* interp_buf = vfs_read_entire_file(interp_path, &interp_size);
+        if (!interp_buf) {
+            vmm_destroy_pagemap(new_pagemap);
+            kfree(new_pagemap);
+            err_code = -ENOENT;
+            goto cleanup_env;
+        }
+
+        uintptr_t interp_entry = 0;
+        if (elf_load_binary_into_pagemap(interp_buf, interp_size, new_pagemap,
+                                        INTERP_LOAD_BASE, &interp_entry, NULL,
+                                        NULL, NULL, NULL, 0) != 0) {
+            
+            kfree(interp_buf);
+            vmm_destroy_pagemap(new_pagemap);
+            kfree(new_pagemap);
+            err_code = -ENOEXEC;
+            goto cleanup_env;
+        }
+        kfree(interp_buf);
+
+        interp_base = INTERP_LOAD_BASE;
+        start_rip = interp_entry;
+    }
+
+    for (uintptr_t s = USER_STACK_VIRT_TOP - (4 * PAGE_SIZE); s < USER_STACK_VIRT_TOP; s += PAGE_SIZE) {
+        uintptr_t frame = pmm_alloc_frame();
+        if (!frame) {
+            vmm_destroy_pagemap(new_pagemap);
+            kfree(new_pagemap);
+            err_code = -ENOMEM;
+            goto cleanup_env;
+        }
+        memset((void*)hhdm_physical_to_virtual(frame), 0, PAGE_SIZE);
+        vmm_map_page(new_pagemap, s, frame, PTE_PRESENT | PTE_WRITABLE | PTE_USER);
+    }
+
     /* 6. Populate Linux System V user stack */
     uintptr_t user_rsp = setup_user_stack(
         new_pagemap,
         USER_STACK_VIRT_TOP,
         &ehdr,
         phdr_vaddr,
+        main_entry,
+        interp_base,
         argc,
         (const char **)kargv,
         (const char **)kenvp
@@ -719,6 +771,9 @@ int64_t sys_execve(const char *path, char *const argv[], char *const envp[], sys
     g_current_thread->pagemap = new_pagemap;
     g_current_thread->clear_child_tid = NULL;
     g_current_thread->fs_base = 0;
+
+    vma_free_list(proc->vma_list);
+    proc->vma_list = NULL;
 
     proc->heap_start = heap_start;
     proc->heap_end   = heap_start;
@@ -751,7 +806,7 @@ int64_t sys_execve(const char *path, char *const argv[], char *const envp[], sys
     kfree(old_pagemap);
 
     /* 8. Reset register context for return to Ring 3 */
-    regs->rip    = entry_point;
+    regs->rip    = start_rip;
     regs->rsp    = user_rsp;
     regs->rflags = 0x202;
     regs->rbp    = 0;

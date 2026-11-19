@@ -6,7 +6,8 @@
 #include <stdbool.h>
 #include "mem/pmm.h"
 #include "mem/vmm.h"
-#include "stdio.h"
+#include "drivers/klog.h"
+#include "sched/spinlock.h"
 
 struct multiboot_mmap_entry_packed {
     uint64_t addr;
@@ -29,6 +30,10 @@ static uint64_t used_frames = 0;
 uint64_t bitmap_size_bytes = 0;
 uintptr_t bm_phys_start = 0;
 static uint64_t g_highest_phys_addr = 0;
+static uint16_t *s_refcounts = NULL;
+static uintptr_t s_refcount_phys_start = 0;
+static uint64_t s_refcount_size_bytes = 0;
+static spinlock_t s_pmm_lock = SPINLOCK_INIT;
 
 /* Running cursor for amortized O(1) frame allocations */
 static uint64_t last_frame_allocated = 0;
@@ -122,6 +127,12 @@ void pmm_init(uintptr_t mb2_phys_addr) {
     bitmap = (uint64_t *)PHYSICAL_TO_VIRTUAL(bitmap_phys);
     bm_phys_start = bitmap_phys;
 
+    s_refcount_size_bytes = total_frames * sizeof(uint16_t);
+    uintptr_t ref_phys = (bitmap_phys + bitmap_size_bytes + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+    s_refcounts = (uint16_t*)PHYSICAL_TO_VIRTUAL(ref_phys);
+    s_refcount_phys_start = ref_phys;
+    memset(s_refcounts, 0, s_refcount_size_bytes);
+
     /* 4. Mark all frames as reserved initially */
     memset(bitmap, 0xFF, bitmap_size_bytes);
     used_frames = total_frames;
@@ -156,6 +167,7 @@ void pmm_init(uintptr_t mb2_phys_addr) {
                        (uintptr_t)_kernel_phys_end - (uintptr_t)_kernel_phys_start);
     pmm_reserve_region(mb2_phys_addr, total_size);
     pmm_reserve_region(bitmap_phys, bitmap_size_bytes);
+    pmm_reserve_region(ref_phys, s_refcount_size_bytes);
 
     for (size_t i = 0; i < g_boot_info.module_count; i++) {
         uintptr_t start = g_boot_info.modules[i].mod_start & ~(PAGE_SIZE - 1);
@@ -170,35 +182,82 @@ void pmm_init(uintptr_t mb2_phys_addr) {
 
 void pmm_remap_bitmap_to_hhdm(void) {
     bitmap = (uint64_t *)hhdm_physical_to_virtual(bm_phys_start);
+    s_refcounts = (uint16_t*)hhdm_physical_to_virtual(s_refcount_phys_start);
 }
 
 /* Fast O(1) single-frame allocation using 64-bit word scanning */
 uintptr_t pmm_alloc_frame(void) {
-    if (used_frames >= total_frames) return 0;
+    uint64_t flags = spinlock_irqsave(&s_pmm_lock);
+    if (used_frames >= total_frames) {
+        spinlock_irqrestore(&s_pmm_lock, flags);
+        return 0;
+    }
 
     uint64_t total_words = (total_frames + 63) / 64;
     uint64_t start_word = last_frame_allocated / 64;
 
     for (uint64_t i = 0; i < total_words; i++) {
         uint64_t word_idx = (start_word + i) % total_words;
-
         if (bitmap[word_idx] != 0xFFFFFFFFFFFFFFFFULL) {
-            /* Find lowest clear bit */
             int bit = __builtin_ctzll(~bitmap[word_idx]);
             uint64_t frame = word_idx * 64 + bit;
-
             if (frame >= total_frames) {
+                spinlock_irqrestore(&s_pmm_lock, flags);
                 return 0;
             }
-
             bitmap_set(frame);
+            s_refcounts[frame] = 1;
             used_frames++;
             last_frame_allocated = frame;
+            spinlock_irqrestore(&s_pmm_lock, flags);
             return (uintptr_t)(frame * PAGE_SIZE);
         }
     }
 
+    spinlock_irqrestore(&s_pmm_lock, flags);
     return 0;
+}
+
+void pmm_ref_frame(uintptr_t phys_addr) {
+    uint64_t frame = phys_addr / PAGE_SIZE;
+    if (frame >= total_frames) return;
+
+    uint64_t flags = spinlock_irqsave(&s_pmm_lock);
+    if (bitmap_test(frame) && s_refcounts[frame] < UINT16_MAX) {
+        s_refcounts[frame]++;
+    }
+    spinlock_irqrestore(&s_pmm_lock, flags);
+}
+
+uint16_t pmm_get_refcount(uintptr_t phys_addr) {
+    uint64_t frame = phys_addr / PAGE_SIZE;
+    if (frame >= total_frames) return 0;
+
+    uint64_t flags = spinlock_irqsave(&s_pmm_lock);
+    uint16_t rc = s_refcounts[frame];
+    spinlock_irqrestore(&s_pmm_lock, flags);
+    return rc;
+}
+
+void pmm_free_frame(uintptr_t phys_addr) {
+    uint64_t frame = phys_addr / PAGE_SIZE;
+    if (frame >= total_frames) return;
+
+    uint64_t flags = spinlock_irqsave(&s_pmm_lock);
+    if (bitmap_test(frame)) {
+        if (s_refcounts[frame] > 1) {
+            s_refcounts[frame]--;
+            spinlock_irqrestore(&s_pmm_lock, flags);
+            return;
+        }
+        s_refcounts[frame] = 0;
+        bitmap_clear(frame);
+        used_frames--;
+        if (frame < last_frame_allocated) {
+            last_frame_allocated = frame;
+        }
+    }
+    spinlock_irqrestore(&s_pmm_lock, flags);
 }
 
 /* Contiguous multi-frame allocation for hardware buffers and huge page alignments */
@@ -237,19 +296,6 @@ uint64_t pmm_get_highest_addr(void) {
     return g_highest_phys_addr;
 }
 
-void pmm_free_frame(uintptr_t phys_addr) {
-    uint64_t frame = phys_addr / PAGE_SIZE;
-    if (frame >= total_frames) return;
-
-    if (bitmap_test(frame)) {
-        bitmap_clear(frame);
-        used_frames--;
-        if (frame < last_frame_allocated) {
-            last_frame_allocated = frame;
-        }
-    }
-}
-
 void pmm_free_frames(uintptr_t phys_addr, size_t count) {
     for (size_t i = 0; i < count; i++) {
         pmm_free_frame(phys_addr + (i * PAGE_SIZE));
@@ -258,7 +304,7 @@ void pmm_free_frames(uintptr_t phys_addr, size_t count) {
 
 void pmm_dump(void) {
     if (!bitmap || total_frames == 0) {
-        serial_printf("[PMM] Not initialized.\n");
+        klog_printf("[PMM] Not initialized.\n");
         return;
     }
 
@@ -267,16 +313,16 @@ void pmm_dump(void) {
     uint64_t used_kib = (used_frames * PAGE_SIZE) / 1024;
     uint64_t free_kib = (free_frames * PAGE_SIZE) / 1024;
 
-    serial_printf("==================== PMM STATUS DUMP ====================\n");
-    serial_printf("Total Memory : %llu MiB (%llu KiB, %llu frames)\n",
+    klog_printf("==================== PMM STATUS DUMP ====================\n");
+    klog_printf("Total Memory : %llu MiB (%llu KiB, %llu frames)\n",
                   total_kib / 1024, total_kib, total_frames);
-    serial_printf("Used Memory  : %llu MiB (%llu KiB, %llu frames)\n",
+    klog_printf("Used Memory  : %llu MiB (%llu KiB, %llu frames)\n",
                   used_kib / 1024, used_kib, used_frames);
-    serial_printf("Free Memory  : %llu MiB (%llu KiB, %llu frames)\n",
+    klog_printf("Free Memory  : %llu MiB (%llu KiB, %llu frames)\n",
                   free_kib / 1024, free_kib, free_frames);
-    serial_printf("Bitmap Base  : %p (Size: %llu bytes)\n",
+    klog_printf("Bitmap Base  : %p (Size: %llu bytes)\n",
                   (void *)bitmap, bitmap_size_bytes);
-    serial_printf("----------------- Physical Memory Layout ----------------\n");
+    klog_printf("----------------- Physical Memory Layout ----------------\n");
 
     int current_state = bitmap_test(0);
     uint64_t region_start_frame = 0;
@@ -289,7 +335,7 @@ void pmm_dump(void) {
             uintptr_t start_addr = region_start_frame * PAGE_SIZE;
             uintptr_t end_addr = (frame * PAGE_SIZE) - 1;
 
-            serial_printf("  [0x%016llx - 0x%016llx] %8llu KiB  %s\n",
+            klog_printf("  [0x%016llx - 0x%016llx] %8llu KiB  %s\n",
                           (unsigned long long)start_addr,
                           (unsigned long long)end_addr,
                           (unsigned long long)(count * 4),
@@ -304,13 +350,13 @@ void pmm_dump(void) {
     uintptr_t start_addr = region_start_frame * PAGE_SIZE;
     uintptr_t end_addr = (total_frames * PAGE_SIZE) - 1;
 
-    serial_printf("  [0x%016llx - 0x%016llx] %8llu KiB  %s\n",
+    klog_printf("  [0x%016llx - 0x%016llx] %8llu KiB  %s\n",
                   (unsigned long long)start_addr,
                   (unsigned long long)end_addr,
                   (unsigned long long)(count * 4),
                   current_state ? "RESERVED" : "FREE");
 
-    serial_printf("=========================================================\n");
+    klog_printf("=========================================================\n");
 }
 
 uint64_t pmm_get_total_frames() {

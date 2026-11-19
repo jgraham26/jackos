@@ -102,6 +102,9 @@ deps_libbb/xconnect.o := \
     $(wildcard include/config/little/endian.h) \
     $(wildcard include/config/nommu.h) \
   /usr/local/lib/gcc/x86_64-jackos/12.2.0/include-fixed/limits.h \
+  /usr/local/lib/gcc/x86_64-jackos/12.2.0/include-fixed/syslimits.h \
+  /home/jack/programming/jackos-v10/src/prog/root/usr/include/limits.h \
+  /home/jack/programming/jackos-v10/src/prog/root/usr/include/bits/limits.h \
   /home/jack/programming/jackos-v10/src/prog/root/usr/include/byteswap.h \
   /usr/local/lib/gcc/x86_64-jackos/12.2.0/include/stdbool.h \
   /home/jack/programming/jackos-v10/src/prog/root/usr/include/unistd.h \

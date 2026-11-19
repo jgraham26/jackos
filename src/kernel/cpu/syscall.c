@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "drivers/klog.h"
 #include "cpu/syscall.h"
 #include "cpu/apic.h"
 #include "cpu/idt.h"
@@ -131,7 +132,7 @@ int64_t sys_ioctl(int fd, uint64_t request, void* arg) {
         return -EBADF;
     }
 
-    serial_printf("[IOCTL] pid=%llu fd=%d node='%s' req=%#llx\n",
+    klog_printf("[IOCTL] pid=%llu fd=%d node='%s' req=%#llx\n",
                   proc->pid, fd, file->node->name, request);
 
     if (file->node->ops && file->node->ops->ioctl) {
@@ -237,7 +238,7 @@ int64_t sys_open(const char* path, int flags, int mode) {
     }
 
     if (proc->pid == 2) {
-        serial_printf("[PID2 OPEN] path='%s' raw_flags=%#x -> f=%p\n", full_path, flags, f);
+        klog_printf("[PID2 OPEN] path='%s' raw_flags=%#x -> f=%p\n", full_path, flags, f);
     }
 
     if (!f) return -ENOENT;
@@ -540,27 +541,7 @@ uintptr_t sys_brk(uintptr_t new_brk) {
 
     /* Case A: Expanding the heap */
     if (new_page_boundary > old_page_boundary) {
-        for (uintptr_t vaddr = old_page_boundary; vaddr < new_page_boundary; vaddr += PAGE_SIZE) {
-            uintptr_t phys = pmm_alloc_frame();
-            if (!phys) {
-                /* Roll back any partially allocated frames */
-                for (uintptr_t rollback = old_page_boundary; rollback < vaddr; rollback += PAGE_SIZE) {
-                    pt_entry_t *entry = vmm_get_pte(proc->pagemap, rollback);
-                    if (entry && (*entry & PTE_PRESENT)) {
-                        pmm_free_frame(*entry & PTE_FRAME_ADDR_MASK);
-                    }
-                    vmm_unmap_page(proc->pagemap, rollback);
-                }
-                return proc->heap_end;
-            }
-
-            /* Zero the newly mapped frame via HHDM to prevent info leaks */
-            void *hhdm_ptr = (void *)hhdm_physical_to_virtual(phys);
-            memset(hhdm_ptr, 0, PAGE_SIZE);
-
-            vmm_map_page(proc->pagemap, vaddr, phys, PTE_PRESENT | PTE_WRITABLE | PTE_USER);
-            vmm_invlpg(vaddr);
-        }
+        vma_add(proc, old_page_boundary, new_page_boundary, VMA_READ | VMA_WRITE | VMA_ANON);
     }
     /* Case B: Shrinking the heap */
     else if (new_page_boundary < old_page_boundary) {
@@ -571,6 +552,7 @@ uintptr_t sys_brk(uintptr_t new_brk) {
             }
             vmm_unmap_page(proc->pagemap, vaddr);
         }
+        vma_remove(proc, new_page_boundary, old_page_boundary);
     }
 
     proc->heap_end = new_brk;
@@ -964,7 +946,7 @@ int64_t sys_mmap(void *addr, size_t length, int prot, int flags, int fd, int64_t
 
     vfs_file_t *file = NULL;
     if (!(flags & MAP_ANONYMOUS)) {
-        serial_printf("[MMAP] fd=%d len=%zu off=%lld\n", fd, length, offset);
+        klog_printf("[MMAP] fd=%d len=%zu off=%lld\n", fd, length, offset);
         bochs_breakpoint();
         if (fd < 0 || fd >= MAX_FDS) {
             return -EBADF;
@@ -1035,43 +1017,37 @@ int64_t sys_mmap(void *addr, size_t length, int prot, int flags, int fd, int64_t
 
     /* Convert POSIX prot flags to x86_64 page table flags */
     uint64_t pte_flags = PTE_PRESENT | PTE_USER;
+    uint32_t vma_flags = 0;
+    if (prot & PROT_READ)  vma_flags |= VMA_READ;
     if (prot & PROT_WRITE) {
         pte_flags |= PTE_WRITABLE;
+        vma_flags |= VMA_WRITE;
     }
+    if (prot & PROT_EXEC)  vma_flags |= VMA_EXEC;
+    if (flags & MAP_SHARED) vma_flags |= VMA_SHARED;
+
 
     /* Device / file-backed mmap (e.g. /dev/fb0) */
     if (!(flags & MAP_ANONYMOUS)) {
-        int rc = file->node->ops->mmap(file->node, proc->pagemap, map_addr,
-                                       aligned_len, pte_flags, (uint64_t)offset);
-        if (rc < 0) {
-            return rc;
+        if (file->node->ops && file->node->ops->mmap) {
+            int rc = file->node->ops->mmap(file->node, proc->pagemap, map_addr, aligned_len, pte_flags, (uint64_t)offset);
+                                           
+            if (rc < 0) {
+                return rc;
+            }
         }
         return (int64_t)map_addr;
-    }
 
-    /* Anonymous zero-filled memory mapping */
-    for (size_t off = 0; off < aligned_len; off += PAGE_SIZE) {
-        uintptr_t vaddr = map_addr + off;
-        uintptr_t phys = pmm_alloc_frame();
-        if (!phys) {
-            /* Roll back partially mapped pages on OOM */
-            for (size_t rb = 0; rb < off; rb += PAGE_SIZE) {
-                pt_entry_t *e = vmm_get_pte(proc->pagemap, map_addr + rb);
-                if (e && (*e & PTE_PRESENT)) {
-                    pmm_free_frame(*e & PTE_FRAME_ADDR_MASK);
-                }
-                vmm_unmap_page(proc->pagemap, map_addr + rb);
-            }
-            return -ENOMEM;
+        if (file->node->flags & VFS_FILE) {
+            vma_add_file(proc, map_addr, map_addr + aligned_len, vma_flags, file->node, (uint64_t)offset);
+            return (int64_t)map_addr;
         }
 
-        /* POSIX requires MAP_ANONYMOUS pages to be zero-initialized */
-        memset((void *)hhdm_physical_to_virtual(phys), 0, PAGE_SIZE);
-
-        vmm_map_page(proc->pagemap, vaddr, phys, pte_flags);
+        return -ENODEV;
     }
 
-    serial_printf("[MMAP] -> %#llx\n", map_addr);
+    vma_flags |= VMA_ANON;
+    vma_add(proc, map_addr, map_addr + aligned_len, vma_flags);
 
     return (int64_t)map_addr;
 }
@@ -1098,6 +1074,8 @@ int64_t sys_munmap(void *addr, size_t length) {
             vmm_invlpg(vaddr);
         }
     }
+
+    vma_remove(proc, start, start + aligned_len);
 
     return 0;
 }
@@ -1254,7 +1232,7 @@ int64_t sys_fcntl(int fd, int cmd, uint64_t arg) {
         return -EBADF;
     }
 
-    serial_printf("[FCNTL] pid=%llu fd=%d cmd=%d arg=%llu\n",
+    klog_printf("[FCNTL] pid=%llu fd=%d cmd=%d arg=%llu\n",
               proc->pid, fd, cmd, arg);
 
     vfs_file_t *file = proc->fd_table[fd];
@@ -1288,7 +1266,7 @@ int64_t sys_fcntl(int fd, int cmd, uint64_t arg) {
         }
 
         default:
-            serial_printf("[FCNTL] Unsupported cmd=%d on fd=%d\n", cmd, fd);
+            klog_printf("[FCNTL] Unsupported cmd=%d on fd=%d\n", cmd, fd);
             return -EINVAL;
     }
 }
@@ -1849,6 +1827,123 @@ int64_t sys_sync() {
     return 0;
 }
 
+int64_t sys_syslog(int type, char *bufp, int len) {
+    if (!g_current_thread || !g_current_thread->process) {
+        return -ESRCH;
+    }
+
+    switch (type) {
+        case SYSLOG_ACTION_CLOSE:
+        case SYSLOG_ACTION_OPEN:
+            return 0;
+
+        case SYSLOG_ACTION_READ: {
+            if (len < 0) return -EINVAL;
+            if (len == 0) return 0;
+            if (!bufp || !validate_user_buffer(bufp, (size_t)len)) {
+                return -EFAULT;
+            }
+            while (klog_size_unread() == 0) {
+                if (g_current_thread->process->sig_pending &
+                    ~g_current_thread->process->sig_blocked) {
+                    return -EINTR;
+                }
+                sched_yield();
+            }
+            return (int64_t)klog_read_consume(bufp, (size_t)len);
+        }
+
+        case SYSLOG_ACTION_READ_ALL:
+        case SYSLOG_ACTION_READ_CLEAR: {
+            if (len < 0) return -EINVAL;
+            if (len == 0) return 0;
+            if (!bufp || !validate_user_buffer(bufp, (size_t)len)) {
+                return -EFAULT;
+            }
+            bool clear = (type == SYSLOG_ACTION_READ_CLEAR);
+            return (int64_t)klog_read_all(bufp, (size_t)len, clear);
+        }
+
+        case SYSLOG_ACTION_CLEAR:
+            klog_clear();
+            return 0;
+
+        case SYSLOG_ACTION_CONSOLE_OFF:
+        case SYSLOG_ACTION_CONSOLE_ON:
+        case SYSLOG_ACTION_CONSOLE_LEVEL:
+            /* No-op console loglevel controls (return success for dmesg -n / -D / -E) */
+            if (type == SYSLOG_ACTION_CONSOLE_LEVEL && (len < 1 || len > 8)) {
+                return -EINVAL;
+            }
+            return 0;
+
+        case SYSLOG_ACTION_SIZE_UNREAD:
+            return (int64_t)klog_size_unread();
+
+        case SYSLOG_ACTION_SIZE_BUFFER:
+            return (int64_t)klog_size_total();
+
+        default:
+            return -EINVAL;
+    }
+}
+
+int64_t sys_mprotect(void *addr, size_t len, int prot) {
+    if (!g_current_thread || !g_current_thread->process) {
+        return -ESRCH;
+    }
+
+    uintptr_t start = (uintptr_t)addr;
+    if ((start & (PAGE_SIZE - 1)) != 0) {
+        return -EINVAL;
+    }
+    if (len == 0) {
+        return 0;
+    }
+
+    size_t aligned_len = PAGE_ALIGN_UP(len);
+    uintptr_t end = start + aligned_len;
+    if (end < start || end > 0x0000800000000000ULL) {
+        return -ENOMEM;
+    }
+
+    process_t *proc = g_current_thread->process;
+    bool writable = (prot & PROT_WRITE) != 0;
+
+    /* Update existing present PTEs in the range */
+    for (uintptr_t vaddr = start; vaddr < end; vaddr += PAGE_SIZE) {
+        pt_entry_t *pte = vmm_get_pte(proc->pagemap, vaddr);
+        if (pte && (*pte & PTE_PRESENT)) {
+            if (writable && !(*pte & PTE_COW)) {
+                *pte |= PTE_WRITABLE;
+            } else if (!writable) {
+                *pte &= ~PTE_WRITABLE;
+            }
+            vmm_invlpg(vaddr);
+        }
+    }
+
+    /* Update VMA flags for un-faulted pages in this range */
+    uint32_t new_vma_perms = 0;
+    if (prot & PROT_READ)  new_vma_perms |= VMA_READ;
+    if (prot & PROT_WRITE) new_vma_perms |= VMA_WRITE;
+    if (prot & PROT_EXEC)  new_vma_perms |= VMA_EXEC;
+
+    for (uintptr_t vaddr = start; vaddr < end; vaddr += PAGE_SIZE) {
+        vma_t *vma = vma_find(proc, vaddr);
+        if (vma) {
+            /* Split if mprotect covers a sub-range of a larger VMA */
+            uint32_t kept_flags = vma->flags & ~(VMA_READ | VMA_WRITE | VMA_EXEC);
+            vma_add_file(proc, vaddr, vaddr + PAGE_SIZE,
+                         kept_flags | new_vma_perms,
+                         vma->file,
+                         vma->file ? (vma->file_offset + (vaddr - vma->start)) : 0);
+        }
+    }
+
+    return 0;
+}
+
 
 // define syscall wrappers
 
@@ -1891,11 +1986,13 @@ DEFINE_SYSCALL3(sys_unlinkat,      int, const char *, int)
 DEFINE_SYSCALL4(sys_renameat,      int, const char *, int, const char *)
 DEFINE_SYSCALL3(sys_symlinkat,     const char *, int, const char *)
 DEFINE_SYSCALL4(sys_readlinkat,    int, const char *, char *, size_t)
+DEFINE_SYSCALL3(sys_syslog, int, char *, int)
 
 /* Memory Management */
 DEFINE_SYSCALL6(sys_mmap,          void *, size_t, int, int, int, int64_t)
 DEFINE_SYSCALL2(sys_munmap,        void *, size_t)
 DEFINE_SYSCALL1(sys_brk,           uintptr_t)
+DEFINE_SYSCALL3(sys_mprotect, void*, size_t, int)
 
 /* Process, Signals, Credentials & Time */
 DEFINE_SYSCALL_REGS0(sys_fork)
@@ -1935,6 +2032,7 @@ static const syscall_fn_t s_syscall_table[SYSCALL_MAX] = {
     [SYS_POLL]            = wrap_sys_poll,
     [SYS_LSEEK]           = wrap_sys_lseek,
     [SYS_MMAP]            = wrap_sys_mmap,
+    [SYS_MPROTECT]        = wrap_sys_mprotect,
     [SYS_MUNMAP]          = wrap_sys_munmap,
     [SYS_BRK]             = wrap_sys_brk,
     [SYS_RT_SIGACTION]    = wrap_sys_rt_sigaction,
@@ -1968,6 +2066,7 @@ static const syscall_fn_t s_syscall_table[SYSCALL_MAX] = {
     [SYS_GETTIMEOFDAY]    = wrap_sys_gettimeofday,
     [SYS_SYSINFO]         = wrap_sys_sysinfo,
     [SYS_GETUID]          = wrap_sys_getuid,
+    [SYS_SYSLOG]          = wrap_sys_syslog,
     [SYS_GETGID]          = wrap_sys_getgid,
     [SYS_GETEUID]         = wrap_sys_geteuid,
     [SYS_GETEGID]         = wrap_sys_getegid,
@@ -1994,7 +2093,7 @@ static const syscall_fn_t s_syscall_table[SYSCALL_MAX] = {
 
 int64_t syscall_dispatch(uint64_t num, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, uint64_t a5, uint64_t a6, syscall_saved_regs_t *regs) {
     if (num >= SYSCALL_MAX || !s_syscall_table[num]) {
-        serial_printf("[SYSCALL] Unknown syscall: %llu\n", num);
+        klog_printf("[SYSCALL] Unknown syscall: %llu\n", num);
         return -ENOSYS;
     }
 

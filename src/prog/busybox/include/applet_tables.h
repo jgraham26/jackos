@@ -1,12 +1,12 @@
 /* This is a generated file, don't edit */
 
-#define NUM_APPLETS 56
+#define NUM_APPLETS 57
 #define KNOWN_APPNAME_OFFSETS 4
 
 const uint16_t applet_nameofs[] ALIGN2 = {
 68,
-137,
-212,
+140,
+214,
 };
 
 const char applet_names[] ALIGN1 = ""
@@ -19,6 +19,7 @@ const char applet_names[] ALIGN1 = ""
 "cut" "\0"
 "date" "\0"
 "dd" "\0"
+"dmesg" "\0"
 "echo" "\0"
 "egrep" "\0"
 "env" "\0"
@@ -77,53 +78,54 @@ const char applet_names[] ALIGN1 = ""
 #define APPLET_NO_cut 6
 #define APPLET_NO_date 7
 #define APPLET_NO_dd 8
-#define APPLET_NO_echo 9
-#define APPLET_NO_egrep 10
-#define APPLET_NO_env 11
-#define APPLET_NO_false 12
-#define APPLET_NO_fbset 13
-#define APPLET_NO_fgrep 14
-#define APPLET_NO_free 15
-#define APPLET_NO_grep 16
-#define APPLET_NO_gunzip 17
-#define APPLET_NO_gzip 18
-#define APPLET_NO_halt 19
-#define APPLET_NO_head 20
-#define APPLET_NO_hexdump 21
-#define APPLET_NO_id 22
-#define APPLET_NO_less 23
-#define APPLET_NO_ln 24
-#define APPLET_NO_ls 25
-#define APPLET_NO_mkdir 26
-#define APPLET_NO_mv 27
-#define APPLET_NO_poweroff 28
-#define APPLET_NO_printenv 29
-#define APPLET_NO_printf 30
-#define APPLET_NO_ps 31
-#define APPLET_NO_pwd 32
-#define APPLET_NO_reboot 33
-#define APPLET_NO_rm 34
-#define APPLET_NO_rmdir 35
-#define APPLET_NO_sed 36
-#define APPLET_NO_sh 37
-#define APPLET_NO_sleep 38
-#define APPLET_NO_sort 39
-#define APPLET_NO_tail 40
-#define APPLET_NO_tar 41
-#define APPLET_NO_tee 42
-#define APPLET_NO_top 43
-#define APPLET_NO_tr 44
-#define APPLET_NO_true 45
-#define APPLET_NO_uname 46
-#define APPLET_NO_uniq 47
-#define APPLET_NO_usleep 48
-#define APPLET_NO_vi 49
-#define APPLET_NO_wc 50
-#define APPLET_NO_whoami 51
-#define APPLET_NO_xargs 52
-#define APPLET_NO_xxd 53
-#define APPLET_NO_yes 54
-#define APPLET_NO_zcat 55
+#define APPLET_NO_dmesg 9
+#define APPLET_NO_echo 10
+#define APPLET_NO_egrep 11
+#define APPLET_NO_env 12
+#define APPLET_NO_false 13
+#define APPLET_NO_fbset 14
+#define APPLET_NO_fgrep 15
+#define APPLET_NO_free 16
+#define APPLET_NO_grep 17
+#define APPLET_NO_gunzip 18
+#define APPLET_NO_gzip 19
+#define APPLET_NO_halt 20
+#define APPLET_NO_head 21
+#define APPLET_NO_hexdump 22
+#define APPLET_NO_id 23
+#define APPLET_NO_less 24
+#define APPLET_NO_ln 25
+#define APPLET_NO_ls 26
+#define APPLET_NO_mkdir 27
+#define APPLET_NO_mv 28
+#define APPLET_NO_poweroff 29
+#define APPLET_NO_printenv 30
+#define APPLET_NO_printf 31
+#define APPLET_NO_ps 32
+#define APPLET_NO_pwd 33
+#define APPLET_NO_reboot 34
+#define APPLET_NO_rm 35
+#define APPLET_NO_rmdir 36
+#define APPLET_NO_sed 37
+#define APPLET_NO_sh 38
+#define APPLET_NO_sleep 39
+#define APPLET_NO_sort 40
+#define APPLET_NO_tail 41
+#define APPLET_NO_tar 42
+#define APPLET_NO_tee 43
+#define APPLET_NO_top 44
+#define APPLET_NO_tr 45
+#define APPLET_NO_true 46
+#define APPLET_NO_uname 47
+#define APPLET_NO_uniq 48
+#define APPLET_NO_usleep 49
+#define APPLET_NO_vi 50
+#define APPLET_NO_wc 51
+#define APPLET_NO_whoami 52
+#define APPLET_NO_xargs 53
+#define APPLET_NO_xxd 54
+#define APPLET_NO_yes 55
+#define APPLET_NO_zcat 56
 
 #ifndef SKIP_applet_main
 int (*const applet_main[])(int argc, char **argv) = {
@@ -136,6 +138,7 @@ cp_main,
 cut_main,
 date_main,
 dd_main,
+dmesg_main,
 echo_main,
 grep_main,
 env_main,
@@ -189,18 +192,19 @@ gunzip_main,
 const uint8_t applet_flags[] ALIGN1 = {
 0x08,
 0xab,
+0x32,
+0x0e,
+0x03,
+0xa8,
+0xe8,
+0xf2,
 0x8e,
-0xc3,
+0x03,
+0x02,
+0xf0,
+0x0c,
+0xab,
 0x00,
-0x2a,
-0xba,
-0xbc,
-0xe3,
-0x80,
-0x00,
-0x3c,
-0xc3,
-0x2a,
 };
 
 const uint8_t applet_install_loc[] ALIGN1 = {
@@ -209,27 +213,28 @@ const uint8_t applet_install_loc[] ALIGN1 = {
 0x13,
 0x13,
 0x11,
-0x31,
-0x41,
-0x31,
+0x11,
+0x13,
+0x14,
+0x13,
+0x11,
+0x32,
+0x33,
+0x13,
 0x11,
 0x21,
-0x33,
-0x33,
-0x11,
+0x31,
 0x11,
 0x12,
-0x13,
-0x21,
 0x11,
 0x11,
+0x33,
 0x31,
-0x13,
 0x33,
+0x11,
 0x13,
 0x31,
-0x11,
 0x33,
 0x33,
-0x13,
+0x01,
 };

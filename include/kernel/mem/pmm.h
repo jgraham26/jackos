@@ -18,3 +18,5 @@ void pmm_remap_bitmap_to_hhdm();
 void pmm_free_frame(uintptr_t phys_addr);
 uint64_t pmm_get_total_frames(void);
 uint64_t pmm_get_free_frames(void);
+void pmm_ref_frame(uintptr_t phys_addr);
+uint16_t pmm_get_refcount(uintptr_t phys_addr);
