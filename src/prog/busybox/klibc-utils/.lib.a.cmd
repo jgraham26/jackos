@@ -1,1 +1,0 @@
-cmd_klibc-utils/lib.a := rm -f klibc-utils/lib.a; x86_64-jackos-ar  rcs klibc-utils/lib.a 
